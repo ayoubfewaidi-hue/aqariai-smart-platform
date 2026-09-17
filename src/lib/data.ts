@@ -145,20 +145,8 @@ export type RegulatoryData = {
   minGreenSpace: string;
 };
 
-export type SellerDraftProperty = {
+export type SellerDraftProperty = Property & {
   id: "seller-draft";
-  title: string;
-  village: string;
-  city: string;
-  basin: string;
-  plot: string;
-  area: number;
-  pricePerM: number;
-  price: number;
-  zoning: string;
-  type: string;
-  coordinates: string;
-  features: string[];
   regulatory: RegulatoryData;
   score: number;
   publishedAt: string;
