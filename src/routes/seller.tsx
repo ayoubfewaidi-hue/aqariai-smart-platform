@@ -7,6 +7,7 @@ import {
   FileImage,
   FileText,
   Hash,
+  Layers3,
   Megaphone,
   Paperclip,
   Rocket,
@@ -33,7 +34,7 @@ import {
 } from "@/components/ui-kit";
 import { supabase } from "@/integrations/supabase/client";
 import { extractPlanData, generateMarketing, type MarketingPackage, type PlanData } from "@/lib/ai.functions";
-import { fmt } from "@/lib/data";
+import { DEFAULT_REGULATORY_DATA, PUBLISHING_CHANNELS, fmt } from "@/lib/data";
 
 export const Route = createFileRoute("/seller")({
   head: () => ({
@@ -65,6 +66,20 @@ type PropertyForm = {
   coordinates: string;
   zoning: string;
   price: string;
+  pricePerM: string;
+  negotiable: boolean;
+  minPricePerM: string;
+  maxPricePerM: string;
+  zoningType: string;
+  buildingRatio: string;
+  far: string;
+  allowedFloors: string;
+  heights: string;
+  frontSetback: string;
+  sideSetback: string;
+  rearSetback: string;
+  minSubdivision: string;
+  minGreenSpace: string;
   type: string;
   features: string;
 };
@@ -78,9 +93,25 @@ const EMPTY_FORM: PropertyForm = {
   coordinates: "",
   zoning: "",
   price: "",
+  pricePerM: "120",
+  negotiable: false,
+  minPricePerM: "110",
+  maxPricePerM: "130",
+  zoningType: DEFAULT_REGULATORY_DATA.type,
+  buildingRatio: DEFAULT_REGULATORY_DATA.buildingRatio,
+  far: DEFAULT_REGULATORY_DATA.far,
+  allowedFloors: DEFAULT_REGULATORY_DATA.floors,
+  heights: DEFAULT_REGULATORY_DATA.height,
+  frontSetback: DEFAULT_REGULATORY_DATA.frontSetback,
+  sideSetback: DEFAULT_REGULATORY_DATA.sideSetback,
+  rearSetback: DEFAULT_REGULATORY_DATA.rearSetback,
+  minSubdivision: DEFAULT_REGULATORY_DATA.minSubdivision,
+  minGreenSpace: DEFAULT_REGULATORY_DATA.minGreenSpace,
   type: "أرض",
   features: "",
 };
+
+type PriceMode = "meter" | "total";
 
 type Attachment = {
   id: string;
@@ -125,6 +156,8 @@ function SellerPortal() {
   const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<PropertyForm>(EMPTY_FORM);
+  const [priceMode, setPriceMode] = useState<PriceMode>("meter");
+  const [marketingBudget, setMarketingBudget] = useState("450");
 
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [category, setCategory] = useState<string>("صورة المخطط");
@@ -139,7 +172,7 @@ function SellerPortal() {
   const planInput = useRef<HTMLInputElement>(null);
   const filesInput = useRef<HTMLInputElement>(null);
 
-  const set = (k: keyof PropertyForm) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const setText = (k: TextFormKey) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   async function handlePlanFiles(fileList: FileList | File[]) {
     const files = validateFiles(Array.from(fileList));
@@ -169,6 +202,16 @@ function SellerPortal() {
         village: data.village || f.village,
         coordinates: data.coordinates || f.coordinates,
         zoning: data.zoning || f.zoning,
+        zoningType: data.zoningType || data.zoning || f.zoningType,
+        buildingRatio: data.buildingRatio || f.buildingRatio,
+        far: data.far || f.far,
+        allowedFloors: data.allowedFloors || f.allowedFloors,
+        heights: data.heights || f.heights,
+        frontSetback: data.frontSetback || f.frontSetback,
+        sideSetback: data.sideSetback || f.sideSetback,
+        rearSetback: data.rearSetback || f.rearSetback,
+        minSubdivision: data.minSubdivision || f.minSubdivision,
+        minGreenSpace: data.minGreenSpace || f.minGreenSpace,
       }));
       toast.success("تم استخراج بيانات الملف");
     } catch (e) {
@@ -243,8 +286,31 @@ function SellerPortal() {
 
   const areaNum = Number(form.area.replace(/[^\d.]/g, "")) || 0;
   const priceNum = Number(form.price.replace(/[^\d.]/g, "")) || 0;
-  const pricePerM = areaNum && priceNum ? Math.round(priceNum / areaNum) : 0;
-  const ready = areaNum > 0 && priceNum > 0 && form.village.trim().length > 0;
+  const meterPriceNum = Number(form.pricePerM.replace(/[^\d.]/g, "")) || 0;
+  const calculatedTotal = Math.round(priceMode === "meter" ? areaNum * meterPriceNum : priceNum);
+  const calculatedPricePerM = areaNum ? Math.round(priceMode === "total" ? priceNum / areaNum : meterPriceNum) : 0;
+  const budgetNum = Number(marketingBudget.replace(/[^\d.]/g, "")) || 0;
+  const weightedChannels = PUBLISHING_CHANNELS.filter((channel) => channel.weight > 0);
+  const channelPlans = PUBLISHING_CHANNELS.map((channel) => ({
+    ...channel,
+    allocation: channel.weight > 0 ? Math.round(budgetNum * channel.weight) : 0,
+  }));
+  const expectedReach = Math.round(
+    PUBLISHING_CHANNELS.reduce((sum, channel) => sum + channel.reach, 0) * Math.max(0.55, Math.min(1.35, budgetNum / 450)),
+  );
+  const expectedLeads = Math.max(8, Math.round(expectedReach * 0.018));
+  const savings = weightedChannels.length ? 28 : 0;
+  const ready = areaNum > 0 && calculatedTotal > 0 && form.village.trim().length > 0;
+  const regulatorySummary = [
+    `نوع التنظيم: ${form.zoningType || form.zoning}`,
+    `نسبة البناء: ${form.buildingRatio}`,
+    `FAR: ${form.far}`,
+    `الأدوار: ${form.allowedFloors}`,
+    `الارتفاع: ${form.heights}`,
+    `الارتدادات: أمامي ${form.frontSetback}، جانبي ${form.sideSetback}، خلفي ${form.rearSetback}`,
+    `الفرز: ${form.minSubdivision}`,
+    `المسطح الأخضر: ${form.minGreenSpace}`,
+  ].join(" | ");
 
   async function buildMarketing() {
     setPkgError(null);
@@ -257,8 +323,11 @@ function SellerPortal() {
           village: form.village,
           city: form.city,
           area: form.area,
-          price: form.price,
+          price: String(calculatedTotal || priceNum),
+          pricePerM: String(calculatedPricePerM),
+          negotiableRange: form.negotiable ? `من ${form.minPricePerM} إلى ${form.maxPricePerM} د.أ/م²` : "",
           zoning: form.zoning,
+          regulatorySummary,
           features: form.features,
         },
       });
@@ -382,6 +451,35 @@ function SellerPortal() {
                   </div>
                 ))}
               </div>
+              <div className="rounded-2xl border border-secondary/45 bg-secondary/10 p-4">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <p className="flex items-center gap-2 text-sm font-black">
+                    <Layers3 className="size-4 text-primary" /> بيانات مستخرجة من المخطط
+                  </p>
+                  <span className="rounded-full border border-secondary/45 bg-secondary px-3 py-1 text-[11px] font-black text-secondary-foreground">
+                    أمانة عمان الكبرى
+                  </span>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-4">
+                  {[
+                    ["نوع التنظيم", form.zoningType],
+                    ["نسبة البناء", form.buildingRatio],
+                    ["FAR", form.far],
+                    ["الأدوار", form.allowedFloors],
+                    ["الارتفاع", form.heights],
+                    ["الأمامي", form.frontSetback],
+                    ["الجانبي", form.sideSetback],
+                    ["الخلفي", form.rearSetback],
+                    ["الحد الأدنى للفرز", form.minSubdivision],
+                    ["المسطح الأخضر", form.minGreenSpace],
+                  ].map(([k, v]) => (
+                    <div key={k} className="rounded-xl border border-border bg-background/30 px-3 py-2">
+                      <p className="text-[11px] text-muted-foreground">{k}</p>
+                      <p className="text-sm font-semibold">{v || "غير ظاهر"}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
               {extracted.notes ? (
                 <p className="text-xs text-muted-foreground">ملاحظة الذكاء: {extracted.notes}</p>
               ) : null}
@@ -412,19 +510,18 @@ function SellerPortal() {
         <GlassCard className="fade-up space-y-4">
           <StepHead n={2} title="بيانات العقار (قابلة للتعديل)" icon={<FileText className="size-4" />} />
           <div className="grid gap-3 sm:grid-cols-3">
-            <Field label="المساحة (م²)" value={form.area} onChange={set("area")} placeholder="1000" />
-            <Field label="رقم القطعة" value={form.plot} onChange={set("plot")} placeholder="1178" />
-            <Field label="الحوض" value={form.basin} onChange={set("basin")} placeholder="حوض 4" />
-            <Field label="القرية / الحي" value={form.village} onChange={set("village")} placeholder="دابوق" />
-            <Field label="المدينة" value={form.city} onChange={set("city")} />
-            <Field label="الإحداثيات" value={form.coordinates} onChange={set("coordinates")} placeholder="31.98, 35.80" />
-            <Field label="التنظيم" value={form.zoning} onChange={set("zoning")} placeholder="سكن ب" />
-            <Field label="السعر المطلوب (د.أ)" value={form.price} onChange={set("price")} placeholder="520000" />
+            <Field label="المساحة (م²)" value={form.area} onChange={setText("area")} placeholder="1000" />
+            <Field label="رقم القطعة" value={form.plot} onChange={setText("plot")} placeholder="1178" />
+            <Field label="الحوض" value={form.basin} onChange={setText("basin")} placeholder="حوض 4" />
+            <Field label="القرية / الحي" value={form.village} onChange={setText("village")} placeholder="دابوق" />
+            <Field label="المدينة" value={form.city} onChange={setText("city")} />
+            <Field label="الإحداثيات" value={form.coordinates} onChange={setText("coordinates")} placeholder="31.98, 35.80" />
+            <Field label="التنظيم" value={form.zoning} onChange={setText("zoning")} placeholder="سكن ب" />
             <label className="block space-y-1.5">
               <span className="text-xs font-semibold text-muted-foreground">نوع العقار</span>
               <select
                 value={form.type}
-                onChange={(e) => set("type")(e.target.value)}
+                onChange={(e) => setText("type")(e.target.value)}
                 className="w-full rounded-xl border border-input bg-background/40 px-3 py-2.5 text-sm outline-none focus:border-primary/70"
               >
                 {["أرض", "فيلا", "شقة", "مشروع"].map((t) => (
@@ -435,10 +532,108 @@ function SellerPortal() {
               </select>
             </label>
           </div>
+
+          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-sm font-black text-primary">طريقة التسعير</p>
+              <div className="flex rounded-xl border border-border bg-background/30 p-1">
+                {[
+                  ["meter", "سعر المتر"],
+                  ["total", "السعر الإجمالي"],
+                ].map(([mode, label]) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setPriceMode(mode as PriceMode)}
+                    className={`rounded-lg px-4 py-2 text-xs font-black transition ${
+                      priceMode === mode ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className={`block rounded-xl border p-3 transition ${priceMode === "meter" ? "border-primary bg-primary/10" : "border-border bg-background/25 opacity-75"}`}>
+                <span className="text-xs font-semibold text-muted-foreground">سعر المتر (د.أ/م²)</span>
+                <input
+                  value={form.pricePerM}
+                  onChange={(e) => setText("pricePerM")(e.target.value)}
+                  placeholder="120"
+                  inputMode="decimal"
+                  className="mt-2 w-full rounded-xl border border-input bg-background/40 px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary/70 focus:ring-2 focus:ring-primary/25"
+                />
+              </label>
+              <label className={`block rounded-xl border p-3 transition ${priceMode === "total" ? "border-primary bg-primary/10" : "border-border bg-background/25 opacity-75"}`}>
+                <span className="text-xs font-semibold text-muted-foreground">السعر الإجمالي المطلوب (د.أ)</span>
+                <input
+                  value={form.price}
+                  onChange={(e) => setText("price")(e.target.value)}
+                  placeholder="1,152,000"
+                  inputMode="decimal"
+                  className="mt-2 w-full rounded-xl border border-input bg-background/40 px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary/70 focus:ring-2 focus:ring-primary/25"
+                />
+              </label>
+            </div>
+            <label className="mt-4 flex items-center gap-2 text-sm font-bold">
+              <input
+                type="checkbox"
+                checked={form.negotiable}
+                onChange={(e) => setForm((f) => ({ ...f, negotiable: e.target.checked }))}
+                className="size-4 accent-[var(--gold)]"
+              />
+              قابل للتفاوض
+            </label>
+            {form.negotiable ? (
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                <Field label="من (د.أ/م²)" value={form.minPricePerM} onChange={setText("minPricePerM")} placeholder="110" />
+                <Field label="إلى (د.أ/م²)" value={form.maxPricePerM} onChange={setText("maxPricePerM")} placeholder="130" />
+              </div>
+            ) : null}
+            <div className="mt-4 rounded-xl border border-border bg-background/30 p-4">
+              <p className="text-xs font-bold text-muted-foreground">السعر الإجمالي = سعر المتر × المساحة</p>
+              <p className="mt-2 text-sm font-black text-primary">
+                المساحة: {fmt(areaNum)} م² × السعر: {fmt(calculatedPricePerM)} د.أ/م² = الإجمالي: {fmt(calculatedTotal)} د.أ
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-secondary/35 bg-secondary/10 p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="flex items-center gap-2 text-sm font-black">
+                <Layers3 className="size-4 text-primary" /> بيانات مستخرجة من المخطط
+              </p>
+              <span className="rounded-full border border-secondary/45 bg-secondary px-3 py-1 text-[11px] font-black text-secondary-foreground">
+                أمانة عمان الكبرى
+              </span>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Field label="نوع التنظيم" value={form.zoningType} onChange={setText("zoningType")} />
+              <Field label="نسبة البناء" value={form.buildingRatio} onChange={setText("buildingRatio")} />
+              <Field label="معامل الاستغلال FAR" value={form.far} onChange={setText("far")} />
+              <Field label="عدد الأدوار المسموحة" value={form.allowedFloors} onChange={setText("allowedFloors")} />
+              <Field label="الارتفاعات" value={form.heights} onChange={setText("heights")} />
+              <Field label="الارتداد الأمامي" value={form.frontSetback} onChange={setText("frontSetback")} />
+              <Field label="الارتداد الجانبي" value={form.sideSetback} onChange={setText("sideSetback")} />
+              <Field label="الارتداد الخلفي" value={form.rearSetback} onChange={setText("rearSetback")} />
+              <Field label="الحد الأدنى للفرز" value={form.minSubdivision} onChange={setText("minSubdivision")} />
+              <Field label="الحد الأدنى للمسطح الأخضر" value={form.minGreenSpace} onChange={setText("minGreenSpace")} />
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="text-sm font-bold">هل البيانات صحيحة؟</span>
+              <GoldButton className="px-3 py-2" onClick={() => setConfirmed(true)}>
+                نعم
+              </GoldButton>
+              <GoldButton className="px-3 py-2" variant="outline" onClick={() => setConfirmed(false)}>
+                تعديل
+              </GoldButton>
+            </div>
+          </div>
           <Field
             label="المميزات (افصل بفاصلة)"
             value={form.features}
-            onChange={set("features")}
+            onChange={setText("features")}
             placeholder="شارعان، إطلالة مفتوحة، خدمات واصلة"
           />
         </GlassCard>
@@ -567,8 +762,8 @@ function SellerPortal() {
             />
           ) : (
             <div className="grid gap-3 sm:grid-cols-4">
-              <Stat label="سعر المتر" value={`${fmt(pricePerM)} د.أ`} />
-              <Stat label="السعر الإجمالي" value={`${fmt(priceNum)} د.أ`} />
+              <Stat label="سعر المتر" value={`${fmt(calculatedPricePerM)} د.أ`} />
+              <Stat label="السعر الإجمالي" value={`${fmt(calculatedTotal)} د.أ`} />
               <Stat label="المساحة" value={`${fmt(areaNum)} م²`} hint={form.zoning || "تنظيم غير محدد"} />
               <Stat
                 label="مستوى الجاهزية"
@@ -613,18 +808,27 @@ function SellerPortal() {
           {pkg && !pkgLoading ? (
             <div className="fade-up space-y-4">
               <div className="space-y-2">
-                <p className="text-xs font-bold text-primary">٣ عناوين إعلانية</p>
-                {pkg.titles.map((t) => (
+                <p className="text-xs font-bold text-primary">٣ عناوين إعلانية: عاطفي · منطقي · عاجل</p>
+                {pkg.titles.map((t, index) => (
                   <p key={t} className="rounded-xl border border-border bg-background/30 px-3 py-2 text-sm">
+                    <span className="me-2 text-primary">{["عاطفي", "منطقي", "عاجل"][index] ?? "عنوان"}</span>
                     {t}
                   </p>
                 ))}
               </div>
               <div>
-                <p className="mb-1 text-xs font-bold text-primary">الوصف التسويقي</p>
-                <p className="rounded-xl border border-border bg-background/30 p-3 text-sm leading-relaxed">
-                  {pkg.description}
-                </p>
+                <p className="mb-1 text-xs font-bold text-primary">الوصف التسويقي بنموذج AIDA</p>
+                <div className="space-y-2 rounded-xl border border-border bg-background/30 p-3 text-sm leading-relaxed">
+                  {(pkg.descriptionParagraphs.length ? pkg.descriptionParagraphs : [pkg.description]).map((paragraph) => (
+                    <p key={paragraph}>{paragraph}</p>
+                  ))}
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <Stat label="الإلحاح" value={pkg.urgency} />
+                <Stat label="الإثبات الاجتماعي" value={pkg.socialProof} />
+                <Stat label="الندرة" value={pkg.scarcity} />
+                <Stat label="الميزة التنافسية" value={pkg.competitiveEdge} />
               </div>
               <div className="flex flex-wrap gap-2">
                 {pkg.hashtags.map((h) => (
@@ -641,8 +845,75 @@ function SellerPortal() {
                 <Stat label="المدة المتوقعة للبيع" value={pkg.expectedTimeToSell} />
                 <Stat label="الجمهور المستهدف" value={pkg.audience} />
               </div>
+              <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4">
+                <p className="mb-3 text-sm font-black text-primary">استراتيجية التسويق — فن الحرب</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {[
+                    ["اضرب حين يكون الطلب مرتفعاً", pkg.artOfWar.demandTiming],
+                    ["اعرف عميلك", pkg.artOfWar.knowClient],
+                    ["ميّز نفسك", pkg.artOfWar.differentiate],
+                    ["اضرب في العمق", pkg.artOfWar.deepStrike],
+                  ].map(([label, value]) => (
+                    <div key={label} className="rounded-xl border border-border bg-background/30 p-3">
+                      <p className="text-[11px] font-bold text-primary">{label}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">{value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           ) : null}
+
+          <div className="space-y-4 rounded-2xl border border-border bg-background/20 p-4">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="text-base font-black">قنوات النشر المقترحة</p>
+                <p className="text-xs text-muted-foreground">أفضل وقت: الخميس والجمعة 7-10 مساءً</p>
+              </div>
+              <label className="block min-w-48 space-y-1.5">
+                <span className="text-xs font-semibold text-muted-foreground">إجمالي الميزانية (د.أ)</span>
+                <input
+                  value={marketingBudget}
+                  onChange={(e) => setMarketingBudget(e.target.value)}
+                  inputMode="decimal"
+                  className="w-full rounded-xl border border-input bg-background/40 px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary/70 focus:ring-2 focus:ring-primary/25"
+                />
+              </label>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              {channelPlans.map((channel) => (
+                <div key={channel.name} className="rounded-xl border border-border bg-background/30 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="grid size-9 place-items-center rounded-xl bg-primary/15 text-xs font-black text-primary">
+                        {channel.logo}
+                      </span>
+                      <div>
+                        <p className="text-sm font-black">{channel.name}</p>
+                        <p className="text-[11px] text-muted-foreground">{channel.cost}</p>
+                      </div>
+                    </div>
+                    <span className={`rounded-full px-2 py-1 text-[11px] font-black ${channel.priority === "عالية" ? "bg-primary text-primary-foreground" : channel.priority === "متوسطة" ? "bg-secondary text-secondary-foreground" : "border border-border text-muted-foreground"}`}>
+                      {channel.priority}
+                    </span>
+                  </div>
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                    <p>الوصول: {fmt(channel.reach)} مشاهدة</p>
+                    <p>التوزيع: {channel.allocation ? `${fmt(channel.allocation)} د.أ` : "مجاني"}</p>
+                    <p className="col-span-2">أفضل وقت: {channel.bestTime}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Stat label="الوصول المتوقع" value={`${fmt(expectedReach)} مشاهدة`} />
+              <Stat label="عملاء محتملون" value={`${fmt(expectedLeads)} lead`} />
+              <Stat label="التوفير" value={`وفّر ${savings}% مقارنة بالتسويق التقليدي`} />
+            </div>
+            <p className="rounded-xl border border-secondary/45 bg-secondary/15 px-4 py-3 text-sm font-bold text-secondary-foreground">
+              متابعة الأداء تبدأ بعد النشر لقياس المشاهدات والتواصل والقنوات الأعلى فعالية.
+            </p>
+          </div>
 
           {published ? (
             <p className="fade-up rounded-xl border border-secondary/60 bg-secondary/20 px-4 py-3 text-sm font-bold">

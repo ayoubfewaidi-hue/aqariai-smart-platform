@@ -132,6 +132,47 @@ export type FeaturedPlot = {
   similar: { name: string; area: string; pricePerM: string; total: string; score: number }[];
 };
 
+export type RegulatoryData = {
+  type: string;
+  buildingRatio: string;
+  far: string;
+  floors: string;
+  height: string;
+  frontSetback: string;
+  sideSetback: string;
+  rearSetback: string;
+  minSubdivision: string;
+  minGreenSpace: string;
+};
+
+export type PublishingChannel = {
+  name: string;
+  logo: string;
+  priority: "عالية" | "متوسطة" | "منخفضة";
+  reach: number;
+  cost: string;
+  bestTime: string;
+  weight: number;
+};
+
+export type AreaRecommendation = {
+  name: string;
+  demand: string;
+  activity: string;
+  avgPricePerM: number;
+  newProjects: string;
+  westAmman: boolean;
+  roiScore: number;
+  amenitiesScore: number;
+  tourismScore: number;
+  why: {
+    سكن: string;
+    استثمار: string;
+    تطوير: string;
+    سياحة: string;
+  };
+};
+
 const DEFAULT_SUB_SCORES = [
   { label: "الموقع والإمكانية الجغرافية", value: 92 },
   { label: "مؤشرات التطوير العمراني", value: 85 },
@@ -152,6 +193,19 @@ const DEFAULT_REGULATORY = [
   { label: "الحد الأدنى للفرز", value: "1,200 م²" },
   { label: "الحد الأدنى للمسطح الأخضر", value: "35%" },
 ];
+
+export const DEFAULT_REGULATORY_DATA: RegulatoryData = {
+  type: "سكن أخضر ج بأحكام خاصة",
+  buildingRatio: "40%",
+  far: "80%",
+  floors: "2",
+  height: "9 م",
+  frontSetback: "5 م",
+  sideSetback: "3 م",
+  rearSetback: "4 م",
+  minSubdivision: "1,200 م²",
+  minGreenSpace: "35%",
+};
 
 const DEFAULT_INVESTMENT_SCENARIOS = [
   {
@@ -300,6 +354,177 @@ export const FEATURED_PLOTS: FeaturedPlot[] = [
   },
 ];
 
+export const PUBLISHING_CHANNELS: PublishingChannel[] = [
+  {
+    name: "AqariAi Platform",
+    logo: "ع",
+    priority: "عالية",
+    reach: 9200,
+    cost: "مجاني",
+    bestTime: "فوري بعد التحقق",
+    weight: 0,
+  },
+  {
+    name: "OpenSooq",
+    logo: "OS",
+    priority: "عالية",
+    reach: 18500,
+    cost: "50-150 د.أ/شهر",
+    bestTime: "الخميس 8 مساءً",
+    weight: 0.22,
+  },
+  {
+    name: "Bayut Jordan",
+    logo: "BJ",
+    priority: "عالية",
+    reach: 14200,
+    cost: "80-200 د.أ/شهر",
+    bestTime: "الجمعة 7 مساءً",
+    weight: 0.24,
+  },
+  {
+    name: "Facebook Ads",
+    logo: "f",
+    priority: "عالية",
+    reach: 26400,
+    cost: "50-200 د.أ/شهر",
+    bestTime: "الخميس والجمعة 7-10 مساءً",
+    weight: 0.26,
+  },
+  {
+    name: "Instagram Ads",
+    logo: "IG",
+    priority: "متوسطة",
+    reach: 11800,
+    cost: "50-200 د.أ/شهر",
+    bestTime: "الجمعة 9 مساءً",
+    weight: 0.16,
+  },
+  {
+    name: "WhatsApp Groups",
+    logo: "WA",
+    priority: "متوسطة",
+    reach: 5600,
+    cost: "مجاني",
+    bestTime: "السبت 11 صباحاً",
+    weight: 0,
+  },
+  {
+    name: "YouTube",
+    logo: "YT",
+    priority: "منخفضة",
+    reach: 7400,
+    cost: "100-500 د.أ/شهر",
+    bestTime: "الأحد 8 مساءً",
+    weight: 0.12,
+  },
+];
+
+export const AREA_RECOMMENDATIONS: AreaRecommendation[] = [
+  {
+    name: "بدر الجديدة",
+    demand: "طلب عالي جداً",
+    activity: "نشطة جداً",
+    avgPricePerM: 120,
+    newProjects: "فلل ومشاريع منخفضة الكثافة",
+    westAmman: true,
+    roiScore: 93,
+    amenitiesScore: 84,
+    tourismScore: 88,
+    why: {
+      سكن: "هدوء ومساحات واسعة وقرب تدريجي من خدمات غرب عمان.",
+      استثمار: "سعر متر منافس مع طلب متزايد على الأراضي الكبيرة.",
+      تطوير: "مناسبة لتطوير سكني أخضر بأحكام خاصة ومساحات مرنة.",
+      سياحة: "إطلالات ومساحات تسمح بفكرة ضيافة أو مزرعة سياحية هادئة.",
+    },
+  },
+  {
+    name: "دابوق",
+    demand: "طلب عالي",
+    activity: "نشطة جداً",
+    avgPricePerM: 520,
+    newProjects: "فلل فاخرة ومشاريع عائلية",
+    westAmman: true,
+    roiScore: 86,
+    amenitiesScore: 96,
+    tourismScore: 62,
+    why: {
+      سكن: "خدمات قوية وخصوصية عالية ومناسبة للعائلات.",
+      استثمار: "سيولة جيدة في شريحة الأراضي والفلل الفاخرة.",
+      تطوير: "مناسبة لمشروع سكني راقٍ بميزة موقع واضحة.",
+      سياحة: "قيمة سياحية أقل من المناطق المطلة لكنها قوية للضيافة الراقية.",
+    },
+  },
+  {
+    name: "الشميساني",
+    demand: "طلب عالي",
+    activity: "نشطة",
+    avgPricePerM: 780,
+    newProjects: "شقق ومكاتب صغيرة",
+    westAmman: true,
+    roiScore: 78,
+    amenitiesScore: 94,
+    tourismScore: 58,
+    why: {
+      سكن: "قرب خدمات ومواصلات ومؤسسات يومية.",
+      استثمار: "طلب مستقر على التأجير بسبب الموقع المركزي.",
+      تطوير: "أفضل للمشاريع الصغيرة والكثافة الأعلى.",
+      سياحة: "مناسب لإقامة قصيرة داخل المدينة أكثر من مزرعة سياحية.",
+    },
+  },
+  {
+    name: "الصويفية",
+    demand: "طلب متوسط",
+    activity: "نشطة",
+    avgPricePerM: 690,
+    newProjects: "شقق وخدمات تجارية",
+    westAmman: true,
+    roiScore: 81,
+    amenitiesScore: 91,
+    tourismScore: 55,
+    why: {
+      سكن: "خدمات تجارية وتعليمية قريبة ونمط حياة نشط.",
+      استثمار: "موقع تجاري يدعم التأجير وإعادة البيع.",
+      تطوير: "مناسبة لمشروع متعدد الاستخدامات بحجم متوسط.",
+      سياحة: "ليست الخيار الأعلى للسياحة الريفية لكنها جيدة للإقامة الحضرية.",
+    },
+  },
+  {
+    name: "مرج الحمام",
+    demand: "طلب متزايد",
+    activity: "نشطة",
+    avgPricePerM: 260,
+    newProjects: "توسع سكني ومزارع قريبة",
+    westAmman: true,
+    roiScore: 89,
+    amenitiesScore: 82,
+    tourismScore: 82,
+    why: {
+      سكن: "توازن جيد بين السعر والخدمات والهدوء.",
+      استثمار: "طلب متزايد وأسعار أقل من قلب غرب عمان.",
+      تطوير: "مساحات أكبر وكلفة دخول أقل لمشروع سكني.",
+      سياحة: "قرب من طبيعة مفتوحة يجعلها مناسبة لمزرعة سياحية صغيرة.",
+    },
+  },
+  {
+    name: "عبدون",
+    demand: "طلب عالي جداً",
+    activity: "نشطة جداً",
+    avgPricePerM: 1450,
+    newProjects: "فلل وشقق فاخرة",
+    westAmman: true,
+    roiScore: 74,
+    amenitiesScore: 98,
+    tourismScore: 48,
+    why: {
+      سكن: "أعلى مستوى خدمات ومكانة اجتماعية واضحة.",
+      استثمار: "أصل دفاعي ممتاز لكن كلفة الدخول عالية.",
+      تطوير: "يناسب تطويراً فاخراً صغير الحجم.",
+      سياحة: "أفضل للضيافة الحضرية لا للمزارع السياحية.",
+    },
+  },
+];
+
 export type BuyerProfile = {
   budget: number;
   areas: string[];
@@ -350,6 +575,32 @@ export function matchReasons(p: Property, profile: BuyerProfile) {
   if (profile.areas.some((a) => p.village.includes(a) || p.city.includes(a)))
     out.push("في منطقة تفضيلك");
   return out.slice(0, 4);
+}
+
+export function smartPropertyScore(p: Property) {
+  return Math.max(55, Math.min(97, Math.round(p.growth * 1.2 + p.liquidity * 0.38 + p.services * 0.42)));
+}
+
+export function recommendAreas(profile: BuyerProfile, text: string) {
+  const normalized = text.replace(/\s+/g, " ");
+  const isWest = /غرب|دابوق|بدر|الصويفية|شميساني|عبدون|مرج الحمام/.test(normalized);
+  const isTourism = /مزرعة|سياح|شاليه|منتجع/.test(normalized);
+  const goal = isTourism ? "سياحة" : profile.goal;
+
+  return AREA_RECOMMENDATIONS.filter((area) => !isWest || area.westAmman)
+    .map((area) => {
+      const budgetFit = Math.max(0, 100 - Math.round(Math.max(0, area.avgPricePerM * 1000 - profile.budget) / 8000));
+      const goalScore = goal === "استثمار" ? area.roiScore : goal === "سكن" ? area.amenitiesScore : goal === "سياحة" ? area.tourismScore : Math.round((area.roiScore + area.amenitiesScore) / 2);
+      const demandBoost = area.demand.includes("جداً") ? 8 : area.demand.includes("عالي") ? 5 : 2;
+      return {
+        ...area,
+        goal,
+        match: Math.max(58, Math.min(98, Math.round(goalScore * 0.62 + budgetFit * 0.3 + demandBoost))),
+        reason: area.why[goal],
+      };
+    })
+    .sort((a, b) => b.match - a.match)
+    .slice(0, isWest ? 5 : 4);
 }
 
 export function fmt(n: number) {
