@@ -34,7 +34,7 @@ import {
 } from "@/components/ui-kit";
 import { supabase } from "@/integrations/supabase/client";
 import { extractPlanData, generateMarketing, type MarketingPackage, type PlanData } from "@/lib/ai.functions";
-import { DEFAULT_REGULATORY_DATA, PUBLISHING_CHANNELS, fmt } from "@/lib/data";
+import { DEFAULT_REGULATORY_DATA, PUBLISHING_CHANNELS, SELLER_DRAFT_STORAGE_KEY, fmt, type Property } from "@/lib/data";
 
 export const Route = createFileRoute("/seller")({
   head: () => ({
@@ -340,6 +340,60 @@ function SellerPortal() {
     } finally {
       setPkgLoading(false);
     }
+  }
+
+  function buildDraftProperty() {
+    const safeType: Property["type"] = ["أرض", "فيلا", "شقة", "مشروع"].includes(form.type)
+      ? (form.type as Property["type"])
+      : "أرض";
+    const score = Math.max(
+      58,
+      Math.min(
+        96,
+        Math.round(
+          54 +
+            Math.min(18, areaNum / 550) +
+            (form.buildingRatio ? 5 : 0) +
+            (form.far ? 5 : 0) +
+            (form.minGreenSpace ? 4 : 0) +
+            (confirmed ? 6 : 0),
+        ),
+      ),
+    );
+    return {
+      id: "seller-draft" as const,
+      title: `${safeType} — ${form.village || "قطعة جديدة"}`,
+      village: form.village || "غير محدد",
+      city: form.city || "عمّان",
+      basin: form.basin || "غير محدد",
+      plot: form.plot || "جديد",
+      area: areaNum,
+      pricePerM: calculatedPricePerM,
+      price: calculatedTotal,
+      zoning: form.zoningType || form.zoning || DEFAULT_REGULATORY_DATA.type,
+      type: safeType,
+      image: planPreview?.url || "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80",
+      features: form.features.split("،").flatMap((part) => part.split(",")).map((part) => part.trim()).filter(Boolean),
+      growth: score > 84 ? 16 : 12,
+      liquidity: score,
+      services: Math.max(72, score - 4),
+      summary: `تم نقل بيانات المخطط التنظيمي إلى صفحة العقار: ${regulatorySummary}.`,
+      coordinates: form.coordinates || "31.9539, 35.9106",
+      regulatory: {
+        type: form.zoningType || form.zoning || DEFAULT_REGULATORY_DATA.type,
+        buildingRatio: form.buildingRatio || DEFAULT_REGULATORY_DATA.buildingRatio,
+        far: form.far || DEFAULT_REGULATORY_DATA.far,
+        floors: form.allowedFloors || DEFAULT_REGULATORY_DATA.floors,
+        height: form.heights || DEFAULT_REGULATORY_DATA.height,
+        frontSetback: form.frontSetback || DEFAULT_REGULATORY_DATA.frontSetback,
+        sideSetback: form.sideSetback || DEFAULT_REGULATORY_DATA.sideSetback,
+        rearSetback: form.rearSetback || DEFAULT_REGULATORY_DATA.rearSetback,
+        minSubdivision: form.minSubdivision || DEFAULT_REGULATORY_DATA.minSubdivision,
+        minGreenSpace: form.minGreenSpace || DEFAULT_REGULATORY_DATA.minGreenSpace,
+      },
+      score,
+      publishedAt: new Date().toISOString(),
+    };
   }
 
   return (
@@ -787,6 +841,7 @@ function SellerPortal() {
               variant="emerald"
               disabled={!pkg}
               onClick={() => {
+                localStorage.setItem(SELLER_DRAFT_STORAGE_KEY, JSON.stringify(buildDraftProperty()));
                 setPublished(true);
                 toast.success("تم نشر العقار على القنوات المقترحة");
               }}
@@ -920,6 +975,13 @@ function SellerPortal() {
           {published ? (
             <p className="fade-up rounded-xl border border-secondary/60 bg-secondary/20 px-4 py-3 text-sm font-bold">
               🎉 عقارك منشور الآن ويظهر للمشترين المطابقين مع درجة مطابقة محسوبة.
+              <button
+                type="button"
+                onClick={() => window.open("/property/seller-draft", "_blank", "noopener,noreferrer")}
+                className="ms-3 rounded-full border border-secondary-foreground/30 px-3 py-1 text-xs transition hover:bg-secondary"
+              >
+                افتح صفحة التفاصيل
+              </button>
             </p>
           ) : null}
         </GlassCard>
