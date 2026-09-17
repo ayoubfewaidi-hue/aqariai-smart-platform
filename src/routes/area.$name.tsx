@@ -1,7 +1,7 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { ArrowRight, Building2, Map as MapIcon, Sparkles, TrendingUp } from "lucide-react";
 
-import { EmptyState, GlassCard, GoldButton, SectionTitle, SiteFooter, SiteHeader, Stat } from "@/components/ui-kit";
+import { EmptyState, GlassCard, SectionTitle, SiteFooter, SiteHeader, Stat } from "@/components/ui-kit";
 import {
   DEFAULT_BUYER,
   areaMatchPercent,
@@ -222,8 +222,11 @@ function AreaPage() {
               </Link>
             ))}
           </div>
-          <Link to="/buyer">
-            <GoldButton variant="outline">العودة للبحث</GoldButton>
+          <Link
+            to="/buyer"
+            className="inline-flex items-center gap-2 rounded-xl border border-primary/40 px-4 py-2.5 text-sm font-bold text-primary transition hover:bg-primary/10"
+          >
+            <ArrowRight className="size-4" /> العودة للبحث
           </Link>
         </GlassCard>
       </main>
