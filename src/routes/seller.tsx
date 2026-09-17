@@ -84,6 +84,8 @@ type PropertyForm = {
   features: string;
 };
 
+type TextFormKey = Exclude<keyof PropertyForm, "negotiable">;
+
 const EMPTY_FORM: PropertyForm = {
   area: "",
   plot: "",
