@@ -1,6 +1,6 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Bot, BadgeCheck, Heart, MapPin, Mountain, Ruler, Search, SearchX, Send, Share2, Sparkles } from "lucide-react";
+import { ArrowUpLeft, Bot, BadgeCheck, Heart, MapPin, Mountain, Ruler, Search, SearchX, Send, Share2, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -20,9 +20,12 @@ import {
   FEATURED_PLOTS,
   PROPERTIES,
   SELLER_DRAFT_STORAGE_KEY,
+  areaListingCount,
+  findSearchAreas,
   fmt,
   matchReasons,
   matchScore,
+  nearbyAlternatives,
   recommendAreas,
   smartPropertyScore,
   type BuyerProfile,
@@ -69,6 +72,7 @@ function BuyerPortal() {
   const [thinking, setThinking] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
   const [sellerDraft, setSellerDraft] = useState<SellerDraftProperty | null>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   useEffect(() => {
     try {
@@ -100,6 +104,13 @@ function BuyerPortal() {
       .map((p) => ({ p, score: matchScore(p, { ...profile, searches: [q] }) }))
       .sort((a, b) => b.score - a.score);
   }, [allProperties, profile, query]);
+
+  const suggestions = useMemo(() => findSearchAreas(query), [query]);
+  const searchedArea = useMemo(
+    () => findSearchAreas(query, 1)[0]?.name ?? query.trim(),
+    [query],
+  );
+  const alternatives = useMemo(() => nearbyAlternatives(searchedArea, profile), [profile, searchedArea]);
 
   const toggleFav = (id: string) =>
     setProfile((pr) => ({
@@ -169,10 +180,54 @@ function BuyerPortal() {
             <Search className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <input
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="ابحث: دابوق، فيلا، أرض، تجاري…"
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setShowSuggestions(true);
+              }}
+              onFocus={(e) => {
+                e.currentTarget.placeholder = "";
+                setShowSuggestions(true);
+              }}
+              onBlur={(e) => {
+                e.currentTarget.placeholder = "ابحث: عبدون، دابوق، بدر الجديدة، أرض…";
+                window.setTimeout(() => setShowSuggestions(false), 150);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") setShowSuggestions(false);
+                if (e.key === "Escape") setShowSuggestions(false);
+              }}
+              placeholder="ابحث: عبدون، دابوق، بدر الجديدة، أرض…"
               className="w-full rounded-xl border border-input bg-background/40 px-4 py-3 pe-10 text-sm outline-none focus:border-primary/70 focus:ring-2 focus:ring-primary/25"
             />
+            {showSuggestions && suggestions.length > 0 ? (
+              <ul className="glass-strong absolute inset-x-0 top-[calc(100%+0.4rem)] z-30 overflow-hidden rounded-xl border border-primary/30 py-1 text-sm shadow-2xl">
+                {suggestions.map((area) => (
+                  <li key={area.name}>
+                    <button
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => {
+                        setQuery(area.name);
+                        setProfile((pr) => ({
+                          ...pr,
+                          areas: pr.areas.includes(area.name) ? pr.areas : [...pr.areas, area.name],
+                        }));
+                        setShowSuggestions(false);
+                      }}
+                      className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-start transition hover:bg-primary/12"
+                    >
+                      <span className="flex items-center gap-2 font-bold">
+                        <MapPin className="size-3.5 text-primary" /> {area.name}
+                        <span className="text-[11px] font-normal text-muted-foreground">{area.city}</span>
+                      </span>
+                      <span className="text-[11px] font-bold text-primary">
+                        {areaListingCount(area.name)} عقار · {fmt(area.avgPricePerM)} د.أ/م²
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-3">
@@ -248,13 +303,18 @@ function BuyerPortal() {
           </h2>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {recommendedAreas.map((area, index) => (
-              <article
+              <Link
                 key={area.name}
-                className={`glass fade-up rounded-2xl p-4 transition-all duration-300 hover:-translate-y-1 ${index === 0 ? "gold-pulse border-primary/45" : ""}`}
+                to="/area/$name"
+                params={{ name: area.name }}
+                className={`glass fade-up group block rounded-2xl border border-transparent p-4 transition-all duration-300 hover:-translate-y-1 hover:scale-[1.02] hover:border-primary/70 ${index === 0 ? "gold-pulse border-primary/45" : ""}`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-base font-black">{area.name}</p>
+                    <p className="flex items-center gap-1.5 text-base font-black">
+                      {area.name}
+                      <ArrowUpLeft className="size-4 text-primary opacity-0 transition group-hover:opacity-100" />
+                    </p>
                     <p className="mt-1 text-xs text-muted-foreground">{area.demand} · حركة {area.activity}</p>
                   </div>
                   <span className="rounded-full bg-primary px-2.5 py-1 text-[11px] font-black text-primary-foreground">
@@ -266,7 +326,8 @@ function BuyerPortal() {
                   <p className="rounded-xl border border-border bg-background/30 p-2">مشاريع: {area.newProjects}</p>
                 </div>
                 <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{area.reason}</p>
-              </article>
+                <p className="mt-2 text-xs font-bold text-primary">{areaListingCount(area.name)} عقار متاح · اضغط للتفاصيل</p>
+              </Link>
             ))}
           </div>
         </section>
@@ -287,12 +348,38 @@ function BuyerPortal() {
             <Sparkles className="size-5 text-primary" /> توصيات مخصصة لك
           </h2>
           {ranked.length === 0 ? (
-            <EmptyState
-              icon={<SearchX className="size-8" />}
-              title="لا نتائج مطابقة لبحثك"
-              desc="جرّب كلمة أوسع مثل «أرض» أو «عمّان»، أو ارفع سقف الميزانية."
-              action={<GoldButton variant="outline" onClick={() => setQuery("")}>مسح البحث</GoldButton>}
-            />
+            <GlassCard className="fade-up space-y-4">
+              <EmptyState
+                icon={<SearchX className="size-8" />}
+                title={query.trim() ? `لا توجد نتائج في ${searchedArea}` : "لا نتائج مطابقة لبحثك"}
+                desc="اخترنا لك بدائل قريبة بخصائص مشابهة، أو وسّع البحث."
+                action={<GoldButton variant="outline" onClick={() => setQuery("")}>مسح البحث</GoldButton>}
+              />
+              <div className="grid gap-3 md:grid-cols-3">
+                {alternatives.map((alt) => (
+                  <Link
+                    key={alt.name}
+                    to="/area/$name"
+                    params={{ name: alt.name }}
+                    className="group rounded-2xl border border-border bg-background/30 p-4 transition hover:-translate-y-1 hover:border-primary/70"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="flex items-center gap-1.5 font-black">
+                        {alt.name}
+                        <ArrowUpLeft className="size-4 text-primary opacity-0 transition group-hover:opacity-100" />
+                      </p>
+                      <span className="rounded-full bg-primary px-2 py-0.5 text-[11px] font-black text-primary-foreground">
+                        مطابقة {alt.match}%
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs text-muted-foreground">لماذا نقترحها: {alt.why}</p>
+                    <p className="mt-2 text-xs font-bold text-primary">
+                      {alt.count} عقار متاح · {fmt(alt.avgPricePerM)} د.أ/م²
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            </GlassCard>
           ) : (
             <div className="grid gap-5 md:grid-cols-2">
               {ranked.map(({ p, score }) => (
