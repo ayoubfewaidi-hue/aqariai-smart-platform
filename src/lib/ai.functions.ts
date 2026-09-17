@@ -10,6 +10,16 @@ export type PlanData = {
   village: string;
   coordinates: string;
   zoning: string;
+  zoningType: string;
+  buildingRatio: string;
+  far: string;
+  allowedFloors: string;
+  heights: string;
+  frontSetback: string;
+  sideSetback: string;
+  rearSetback: string;
+  minSubdivision: string;
+  minGreenSpace: string;
   notes: string;
   confidence: number;
 };
@@ -27,11 +37,11 @@ export const extractPlanData = createServerFn({ method: "POST" })
     const raw = await askAI({
       effort: "low",
       instructions:
-        "أنت خبير في قراءة وثائق الأراضي الأردنية، خصوصاً وثائق تطبيق سند والمخططات التنظيمية وسجلات دائرة الأراضي. استخرج البيانات المكتوبة بدقة. أعِد JSON فقط دون أي نص إضافي بالمفاتيح: area, plot, basin, village, coordinates, zoning, notes, confidence. اترك القيمة نصاً فارغاً إذا لم تكن ظاهرة. confidence رقم من 0 إلى 100. التنظيم (zoning) استنتجه من الوثيقة أو من التنظيم المعتاد للمنطقة واذكر ذلك في notes.",
+        "أنت خبير في قراءة وثائق الأراضي الأردنية، خصوصاً وثائق تطبيق سند والمخططات التنظيمية وسجلات دائرة الأراضي وأمانة عمان الكبرى. استخرج البيانات المكتوبة بدقة. أعِد JSON فقط دون أي نص إضافي بالمفاتيح: area, plot, basin, village, coordinates, zoning, zoningType, buildingRatio, far, allowedFloors, heights, frontSetback, sideSetback, rearSetback, minSubdivision, minGreenSpace, notes, confidence. اترك القيمة نصاً فارغاً إذا لم تكن ظاهرة. confidence رقم من 0 إلى 100. التنظيم والاشتراطات التنظيمية استنتجها من الوثيقة أولاً، وإن لم تظهر اذكر الافتراض بوضوح في notes.",
       parts: [
         {
           type: "input_text",
-          text: "استخرج بيانات هذه القطعة من الملف المرفق: المساحة، رقم القطعة، الحوض، القرية، الإحداثيات، التنظيم. الملف قد يكون وثيقة سند أردنية أو مخططاً تنظيمياً أو سجلاً.",
+          text: "استخرج بيانات هذه القطعة من الملف المرفق: المساحة، رقم القطعة، الحوض، القرية، الإحداثيات، التنظيم، نسبة البناء، معامل الاستغلال FAR، عدد الأدوار، الارتفاعات، الارتدادات، الحد الأدنى للفرز، والحد الأدنى للمسطح الأخضر. الملف قد يكون وثيقة سند أردنية أو مخططاً تنظيمياً أو سجلاً.",
         },
         isPdf
           ? { type: "input_file", filename: data.fileName, file_data: data.fileDataUrl }
@@ -49,6 +59,16 @@ export const extractPlanData = createServerFn({ method: "POST" })
       village: String(parsed.village ?? ""),
       coordinates: String(parsed.coordinates ?? ""),
       zoning: String(parsed.zoning ?? ""),
+      zoningType: String(parsed.zoningType ?? parsed.zoning ?? ""),
+      buildingRatio: String(parsed.buildingRatio ?? ""),
+      far: String(parsed.far ?? ""),
+      allowedFloors: String(parsed.allowedFloors ?? ""),
+      heights: String(parsed.heights ?? ""),
+      frontSetback: String(parsed.frontSetback ?? ""),
+      sideSetback: String(parsed.sideSetback ?? ""),
+      rearSetback: String(parsed.rearSetback ?? ""),
+      minSubdivision: String(parsed.minSubdivision ?? ""),
+      minGreenSpace: String(parsed.minGreenSpace ?? ""),
       notes: String(parsed.notes ?? ""),
       confidence: Number(parsed.confidence ?? 70),
     };
@@ -57,6 +77,7 @@ export const extractPlanData = createServerFn({ method: "POST" })
 export type MarketingPackage = {
   titles: string[];
   description: string;
+  descriptionParagraphs: string[];
   hashtags: string[];
   channels: string[];
   budget: string;
@@ -64,6 +85,16 @@ export type MarketingPackage = {
   pricingStrategy: string;
   expectedTimeToSell: string;
   audience: string;
+  urgency: string;
+  socialProof: string;
+  scarcity: string;
+  competitiveEdge: string;
+  artOfWar: {
+    demandTiming: string;
+    knowClient: string;
+    differentiate: string;
+    deepStrike: string;
+  };
 };
 
 const MarketingInput = z.object({
@@ -72,7 +103,10 @@ const MarketingInput = z.object({
   city: z.string(),
   area: z.string(),
   price: z.string(),
+  pricePerM: z.string().optional().default(""),
+  negotiableRange: z.string().optional().default(""),
   zoning: z.string().optional().default(""),
+  regulatorySummary: z.string().optional().default(""),
   features: z.string().optional().default(""),
 });
 
@@ -82,11 +116,11 @@ export const generateMarketing = createServerFn({ method: "POST" })
     const raw = await askAI({
       effort: "low",
       instructions:
-        "أنت مدير تسويق عقاري أردني محترف. أعِد JSON فقط بالمفاتيح: titles (3 عناوين إعلانية جاذبة), description (وصف تسويقي كامل 90-140 كلمة), hashtags (6 هاشتاقات عربية), channels (4 قنوات نشر مناسبة), budget (ميزانية إعلانية مقترحة بالدينار الأردني), postingTime (أفضل وقت وأيام للنشر), pricingStrategy (استراتيجية تسعير), expectedTimeToSell (المدة المتوقعة للبيع), audience (الجمهور المستهدف). كل النصوص بالعربية.",
+        "أنت مدير تسويق عقاري أردني محترف وخبير في فن الإقناع. أعِد JSON فقط بالمفاتيح: titles (3 عناوين بالترتيب: عاطفي، منطقي، عاجل), descriptionParagraphs (3 فقرات: جذب عاطفي، تفاصيل فنية، دعوة عاجلة), description (ادمج الفقرات الثلاث بنص واحد), hashtags (10 إلى 15 هاشتاقاً), channels (5 قنوات نشر مناسبة), budget, postingTime, pricingStrategy, expectedTimeToSell, audience, urgency, socialProof, scarcity, competitiveEdge, artOfWar وفيه demandTiming, knowClient, differentiate, deepStrike. طبّق AIDA، محفزات عاطفية مثل فرصة لا تتكرر واستثمر مستقبلك، الندرة، الإلحاح، والإثبات الاجتماعي. اذكر داخل الوصف: تمت مراجعة المخطط التنظيمي للقطعة .. التنظيم: سكن أخضر ج بأحكام خاصة .. إمكانيات تطوير متعددة، أو استخدم التنظيم الفعلي إن توفر. كل النصوص بالعربية ومناسبة للسوق الأردني.",
       parts: [
         {
           type: "input_text",
-          text: `النوع: ${data.type}\nالمنطقة: ${data.village} - ${data.city}\nالمساحة: ${data.area} م²\nالسعر المطلوب: ${data.price} دينار\nالتنظيم: ${data.zoning}\nالمميزات: ${data.features}`,
+          text: `النوع: ${data.type}\nالمنطقة: ${data.village} - ${data.city}\nالمساحة: ${data.area} م²\nالسعر الإجمالي المطلوب: ${data.price} دينار\nسعر المتر: ${data.pricePerM} د.أ/م²\nنطاق التفاوض: ${data.negotiableRange || "غير محدد"}\nالتنظيم: ${data.zoning}\nبيانات المخطط التنظيمي: ${data.regulatorySummary}\nالمميزات: ${data.features}`,
         },
       ],
     });
@@ -100,13 +134,24 @@ export const generateMarketing = createServerFn({ method: "POST" })
     return {
       titles: arr(parsed.titles, ["فرصة عقارية مميزة"]).slice(0, 3),
       description: String(parsed.description ?? ""),
-      hashtags: arr(parsed.hashtags, ["#عقارات_الأردن"]).slice(0, 8),
+      descriptionParagraphs: arr(parsed.descriptionParagraphs, [String(parsed.description ?? "")]).slice(0, 3),
+      hashtags: arr(parsed.hashtags, ["#عقارات_الأردن", "#عقاري_آي", "#AqariAi"]).slice(0, 15),
       channels: arr(parsed.channels, ["فيسبوك", "إنستغرام", "واتساب", "منصات العقارات"]).slice(0, 5),
       budget: String(parsed.budget ?? "—"),
       postingTime: String(parsed.postingTime ?? "—"),
       pricingStrategy: String(parsed.pricingStrategy ?? "—"),
       expectedTimeToSell: String(parsed.expectedTimeToSell ?? "—"),
       audience: String(parsed.audience ?? "—"),
+      urgency: String(parsed.urgency ?? "الفرص المماثلة تتحرك سريعاً عند تسعيرها بذكاء."),
+      socialProof: String(parsed.socialProof ?? "هناك طلب نشط من مستثمرين يبحثون عن أراضٍ بهذه المواصفات."),
+      scarcity: String(parsed.scarcity ?? "مناطق محدودة تجمع بين هذا السعر وإمكانيات التطوير."),
+      competitiveEdge: String(parsed.competitiveEdge ?? "سعر متر واضح مع بيانات تنظيمية موثقة."),
+      artOfWar: {
+        demandTiming: String(parsed.artOfWar?.demandTiming ?? "اضرب حين يكون الطلب مرتفعاً: الخميس والجمعة مساءً."),
+        knowClient: String(parsed.artOfWar?.knowClient ?? "اعرف عميلك: استهدف المستثمر الجاد والعائلة الباحثة عن توسع."),
+        differentiate: String(parsed.artOfWar?.differentiate ?? "ميّز نفسك: اعرض التنظيم والسعر بالمتر بوضوح."),
+        deepStrike: String(parsed.artOfWar?.deepStrike ?? "اضرب في العمق: وزّع الميزانية على القنوات الأعلى نية شراء."),
+      },
     };
   });
 

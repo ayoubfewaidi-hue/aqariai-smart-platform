@@ -143,6 +143,10 @@
   animation: gauge-breathe 2.8s ease-in-out infinite;
 }
 
+@utility gold-pulse {
+  animation: gold-pulse 1.9s ease-in-out infinite;
+}
+
 @utility fade-up {
   animation: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -165,6 +169,18 @@
   }
   50% {
     filter: drop-shadow(0 0 22px color-mix(in oklab, var(--gold) 22%, transparent));
+  }
+}
+
+@keyframes gold-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--gold) 0%, transparent);
+    transform: translateY(0);
+  }
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in oklab, var(--gold) 12%, transparent);
+    transform: translateY(-1px);
   }
 }
 

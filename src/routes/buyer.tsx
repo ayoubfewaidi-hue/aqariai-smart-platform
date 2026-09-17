@@ -1,7 +1,7 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Bot, Heart, Mountain, Ruler, Search, SearchX, Send, Sparkles } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Bot, BadgeCheck, Heart, MapPin, Mountain, Ruler, Search, SearchX, Send, Share2, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -19,11 +19,15 @@ import {
   DEFAULT_BUYER,
   FEATURED_PLOTS,
   PROPERTIES,
+  SELLER_DRAFT_STORAGE_KEY,
   fmt,
   matchReasons,
   matchScore,
+  recommendAreas,
+  smartPropertyScore,
   type BuyerProfile,
   type Property,
+  type SellerDraftProperty,
 } from "@/lib/data";
 
 export const Route = createFileRoute("/buyer")({
@@ -47,7 +51,6 @@ export const Route = createFileRoute("/buyer")({
   component: BuyerPortal,
 });
 
-const AREAS = ["عبدون", "دابوق", "عمّان", "الزرقاء", "إربد"];
 const GOALS: BuyerProfile["goal"][] = ["سكن", "استثمار", "تطوير"];
 
 type Msg = { role: "user" | "assistant"; text: string };
@@ -65,17 +68,38 @@ function BuyerPortal() {
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
+  const [sellerDraft, setSellerDraft] = useState<SellerDraftProperty | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SELLER_DRAFT_STORAGE_KEY);
+      setSellerDraft(raw ? (JSON.parse(raw) as SellerDraftProperty) : null);
+    } catch {
+      setSellerDraft(null);
+    }
+  }, []);
+
+  const conversationText = useMemo(
+    () => `${query} ${input} ${messages.map((m) => m.text).join(" ")}`,
+    [input, messages, query],
+  );
+
+  const recommendedAreas = useMemo(() => recommendAreas(profile, conversationText), [conversationText, profile]);
+  const allProperties = useMemo<Property[]>(
+    () => (sellerDraft ? [sellerDraft, ...PROPERTIES] : PROPERTIES),
+    [sellerDraft],
+  );
 
   const ranked = useMemo(() => {
     const q = query.trim();
-    return PROPERTIES.filter(
+    return allProperties.filter(
       (p) =>
         !q ||
         `${p.title} ${p.village} ${p.city} ${p.type} ${p.zoning} ${p.basin}`.includes(q),
     )
       .map((p) => ({ p, score: matchScore(p, { ...profile, searches: [q] }) }))
       .sort((a, b) => b.score - a.score);
-  }, [profile, query]);
+  }, [allProperties, profile, query]);
 
   const toggleFav = (id: string) =>
     setProfile((pr) => ({
@@ -104,10 +128,17 @@ function BuyerPortal() {
         data: {
           message: text,
           history,
-          catalog: PROPERTIES.map(
+          catalog: [
+            ...allProperties.map(
             (p) =>
               `${p.title} | ${p.village}-${p.city} | ${p.type} | ${p.area}م² | ${p.price} د.أ | تنظيم ${p.zoning} | نمو ${p.growth}%`,
-          ).join("\n"),
+            ),
+            ...FEATURED_PLOTS.map(
+              (p) =>
+                `قطعة ${p.name} ${p.plot} | أرض | ${p.areaText} | ${p.total} د.أ | ${p.pricePerM} د.أ/م² | Smart Score ${p.score} | ${p.zoning}`,
+            ),
+            `مناطق ذكية مقترحة الآن: ${recommendedAreas.map((a) => `${a.name} مطابقة ${a.match}% وسعر ${a.avgPricePerM} د.أ/م²`).join("؛ ")}`,
+          ].join("\n"),
           profile: `الميزانية: ${profile.budget} د.أ | المناطق: ${
             profile.areas.join("، ") || "غير محددة"
           } | أفراد العائلة: ${profile.familySize} | الهدف: ${profile.goal} | المفضلة: ${
@@ -193,21 +224,52 @@ function BuyerPortal() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {AREAS.map((a) => (
+            {recommendedAreas.map((area, index) => (
               <button
-                key={a}
-                onClick={() => toggleArea(a)}
+                key={area.name}
+                onClick={() => toggleArea(area.name)}
                 className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
-                  profile.areas.includes(a)
+                  index === 0 ? "gold-pulse " : ""
+                }${
+                  profile.areas.includes(area.name)
                     ? "bg-secondary text-secondary-foreground"
                     : "border border-border text-muted-foreground hover:bg-accent"
                 }`}
               >
-                {a}
+                {area.name} · {area.match}%
               </button>
             ))}
           </div>
         </GlassCard>
+
+        <section className="space-y-4">
+          <h2 className="flex items-center gap-2 text-xl font-bold">
+            <MapPin className="size-5 text-primary" /> مناطق مرشحة لك
+          </h2>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {recommendedAreas.map((area, index) => (
+              <article
+                key={area.name}
+                className={`glass fade-up rounded-2xl p-4 transition-all duration-300 hover:-translate-y-1 ${index === 0 ? "gold-pulse border-primary/45" : ""}`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-base font-black">{area.name}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{area.demand} · حركة {area.activity}</p>
+                  </div>
+                  <span className="rounded-full bg-primary px-2.5 py-1 text-[11px] font-black text-primary-foreground">
+                    مطابقة {area.match}%
+                  </span>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                  <p className="rounded-xl border border-border bg-background/30 p-2">متوسط المتر: {fmt(area.avgPricePerM)} د.أ</p>
+                  <p className="rounded-xl border border-border bg-background/30 p-2">مشاريع: {area.newProjects}</p>
+                </div>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{area.reason}</p>
+              </article>
+            ))}
+          </div>
+        </section>
 
         <section className="space-y-4">
           <h2 className="flex items-center gap-2 text-xl font-bold">
@@ -241,6 +303,7 @@ function BuyerPortal() {
                   reasons={matchReasons(p, profile)}
                   fav={profile.favorites.includes(p.id)}
                   onFav={() => toggleFav(p.id)}
+                  budget={profile.budget}
                 />
               ))}
             </div>
@@ -293,8 +356,11 @@ function FeaturedPlotCard({ plot }: { plot: (typeof FEATURED_PLOTS)[number] }) {
     <article className="glass fade-up overflow-hidden rounded-2xl transition-all duration-300 hover:-translate-y-1">
       <div className="aerial-placeholder relative h-44">
         <div className="absolute inset-0 bg-[color-mix(in_oklab,var(--navy-deep)_28%,transparent)]" />
-        <span className="absolute start-3 top-3 rounded-full border border-primary/35 bg-primary px-3 py-1 text-xs font-black text-primary-foreground shadow-lg">
+        <span className="absolute end-3 top-3 rounded-full border border-primary/35 bg-primary px-3 py-1 text-xs font-black text-primary-foreground shadow-lg">
           Smart Score: {plot.score}/100
+        </span>
+        <span className="absolute start-3 top-3 rounded-full border border-border bg-background/55 px-3 py-1 text-xs font-black backdrop-blur">
+          أرض
         </span>
         <div className="absolute bottom-4 right-4 left-4 flex items-end justify-between gap-3">
           <div>
@@ -308,6 +374,18 @@ function FeaturedPlotCard({ plot }: { plot: (typeof FEATURED_PLOTS)[number] }) {
       </div>
       <div className="space-y-4 p-5">
         <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-xl border border-primary/35 bg-primary/10 p-3">
+            <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <BadgeCheck className="size-3.5 text-primary" /> سعر المتر
+            </p>
+            <p className="mt-1 text-base font-black text-primary">{fmt(plot.pricePerM)} د.أ/م²</p>
+          </div>
+          <div className="rounded-xl border border-border bg-background/30 p-3">
+            <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <Sparkles className="size-3.5 text-primary" /> الإجمالي
+            </p>
+            <p className="mt-1 text-sm font-black text-primary">{fmt(plot.total)} د.أ</p>
+          </div>
           <div className="rounded-xl border border-border bg-background/30 p-3">
             <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
               <Ruler className="size-3.5 text-primary" /> المساحة
@@ -351,30 +429,30 @@ function PropertyCard({
   reasons,
   fav,
   onFav,
+  budget,
 }: {
   property: Property;
   score: number;
   reasons: string[];
   fav: boolean;
   onFav: () => void;
+  budget: number;
 }) {
+  const smartScore = smartPropertyScore(p);
+  const budgetStatus = p.price <= budget ? "داخل ميزانيتك" : `أعلى من ميزانيتك بـ ${fmt(p.price - budget)} د.أ`;
   return (
     <article className="glass fade-up overflow-hidden rounded-2xl transition-all duration-300 hover:-translate-y-1">
       <div className="relative">
         <img src={p.image} alt={p.title} loading="lazy" className="h-44 w-full object-cover" />
-        <span className="absolute end-3 top-3 rounded-full bg-[color-mix(in_oklab,var(--navy-deep)_75%,transparent)] px-3 py-1 text-xs font-black text-primary backdrop-blur">
+        <span className="absolute end-3 top-3 rounded-full border border-primary/40 bg-primary px-3 py-1 text-xs font-black text-primary-foreground shadow-lg">
+          Smart Score {smartScore}/100
+        </span>
+        <span className="absolute end-3 top-11 rounded-full bg-[color-mix(in_oklab,var(--navy-deep)_75%,transparent)] px-3 py-1 text-xs font-black text-primary backdrop-blur">
           مطابقة {score}%
         </span>
-        <button
-          onClick={() => {
-            onFav();
-            toast.success(fav ? "أزلنا العقار من المفضلة" : "أضفنا العقار للمفضلة");
-          }}
-          aria-label="إضافة للمفضلة"
-          className="absolute start-3 top-3 grid size-9 place-items-center rounded-full bg-[color-mix(in_oklab,var(--navy-deep)_70%,transparent)] backdrop-blur transition hover:scale-105"
-        >
-          <Heart className={`size-4 ${fav ? "fill-primary text-primary" : "text-foreground"}`} />
-        </button>
+        <span className="absolute start-3 top-3 rounded-full border border-border bg-background/60 px-3 py-1 text-xs font-black backdrop-blur">
+          {p.type}
+        </span>
       </div>
       <div className="space-y-3 p-5">
         <div>
@@ -383,7 +461,19 @@ function PropertyCard({
             {p.village} — {p.city} · {p.area} م² · {p.zoning}
           </p>
         </div>
-        <p className="text-lg font-black text-primary">{fmt(p.price)} د.أ</p>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-xl border border-primary/35 bg-primary/10 p-3">
+            <p className="text-[11px] text-muted-foreground">سعر المتر</p>
+            <p className="mt-1 text-lg font-black text-primary">{fmt(p.pricePerM)} د.أ/م²</p>
+          </div>
+          <div className="rounded-xl border border-border bg-background/30 p-3">
+            <p className="text-[11px] text-muted-foreground">السعر الإجمالي</p>
+            <p className="mt-1 text-sm font-black text-primary">{fmt(p.price)} د.أ</p>
+          </div>
+        </div>
+        <p className={`rounded-xl px-3 py-2 text-xs font-black ${p.price <= budget ? "bg-secondary/20 text-secondary-foreground" : "bg-primary/12 text-primary"}`}>
+          {budgetStatus}
+        </p>
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-background/50">
           <div
             className="h-full rounded-full bg-primary transition-all duration-700"
@@ -395,15 +485,34 @@ function PropertyCard({
             <li key={r}>• {r}</li>
           ))}
         </ul>
-        <Link
-          to="/property/$id"
-          params={{ id: p.id }}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex w-full items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground transition hover:brightness-110"
-        >
-          التحليل الكامل
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            to="/property/$id"
+            params={{ id: p.id }}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex flex-1 items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground transition hover:brightness-110"
+          >
+            التحليل الكامل
+          </Link>
+          <button
+            onClick={() => {
+              onFav();
+              toast.success(fav ? "أزلنا العقار من المفضلة" : "أضفنا العقار للمفضلة");
+            }}
+            aria-label="إضافة للمفضلة"
+            className="grid size-10 place-items-center rounded-xl border border-border text-muted-foreground transition hover:bg-accent hover:text-primary"
+          >
+            <Heart className={`size-4 ${fav ? "fill-primary text-primary" : ""}`} />
+          </button>
+          <button
+            onClick={() => toast.success("تم نسخ رابط العقار للمشاركة")}
+            aria-label="مشاركة العقار"
+            className="grid size-10 place-items-center rounded-xl border border-border text-muted-foreground transition hover:bg-accent hover:text-primary"
+          >
+            <Share2 className="size-4" />
+          </button>
+        </div>
       </div>
     </article>
   );
