@@ -145,6 +145,25 @@ export type RegulatoryData = {
   minGreenSpace: string;
 };
 
+export type SellerDraftProperty = {
+  id: "seller-draft";
+  title: string;
+  village: string;
+  city: string;
+  basin: string;
+  plot: string;
+  area: number;
+  pricePerM: number;
+  price: number;
+  zoning: string;
+  type: string;
+  coordinates: string;
+  features: string[];
+  regulatory: RegulatoryData;
+  score: number;
+  publishedAt: string;
+};
+
 export type PublishingChannel = {
   name: string;
   logo: string;
@@ -206,6 +225,8 @@ export const DEFAULT_REGULATORY_DATA: RegulatoryData = {
   minSubdivision: "1,200 م²",
   minGreenSpace: "35%",
 };
+
+export const SELLER_DRAFT_STORAGE_KEY = "aqariai-seller-draft-v1";
 
 const DEFAULT_INVESTMENT_SCENARIOS = [
   {
