@@ -15,6 +15,7 @@ import {
   UploadCloud,
   X,
 } from "lucide-react";
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.mjs?url";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
@@ -725,7 +726,7 @@ function PdfPreview({ file, compact, className }: { file: PreviewFile; compact?:
 
       try {
         const pdfjs = await import("pdfjs-dist");
-        pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.mjs", import.meta.url).toString();
+        pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
         const loadingTask = pdfjs.getDocument({ data: dataUrlToBytes(file.url) });
         const pdf = await loadingTask.promise;
         const page = await pdf.getPage(1);
