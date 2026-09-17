@@ -726,7 +726,8 @@ function PdfPreview({ file, compact, className }: { file: PreviewFile; compact?:
       try {
         const pdfjs = await import("pdfjs-dist");
         pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.mjs", import.meta.url).toString();
-        const pdf = await pdfjs.getDocument({ data: dataUrlToBytes(file.url) }).promise;
+        const loadingTask = pdfjs.getDocument({ data: dataUrlToBytes(file.url) });
+        const pdf = await loadingTask.promise;
         const page = await pdf.getPage(1);
         const viewport = page.getViewport({ scale: compact ? 0.32 : 1.35 });
         const context = canvas.getContext("2d");
@@ -734,8 +735,8 @@ function PdfPreview({ file, compact, className }: { file: PreviewFile; compact?:
 
         canvas.width = Math.floor(viewport.width);
         canvas.height = Math.floor(viewport.height);
-        await page.render({ canvasContext: context, viewport }).promise;
-        await pdf.destroy();
+        await page.render({ canvas, canvasContext: context, viewport }).promise;
+        await loadingTask.destroy();
       } catch {
         if (!cancelled) setFailed(true);
       }
