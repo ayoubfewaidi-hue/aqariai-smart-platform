@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -95,13 +95,16 @@ export function Field({
   placeholder?: string;
   type?: string;
 }) {
+  const [focused, setFocused] = useState(false);
   return (
     <label className="block space-y-1.5">
       <span className="text-xs font-semibold text-muted-foreground">{label}</span>
       <input
         type={type}
         value={value}
-        placeholder={placeholder}
+        placeholder={focused ? "" : placeholder}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-xl border border-input bg-background/40 px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary/70 focus:ring-2 focus:ring-primary/25"
       />
