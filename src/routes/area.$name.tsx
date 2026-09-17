@@ -134,7 +134,7 @@ function AreaPage() {
                     </div>
                     <p className="mt-2 text-xs text-muted-foreground">لماذا نقترحها: {alt.why}</p>
                     <p className="mt-2 text-xs font-bold text-primary">
-                      {alt.count} عقار متاح · {fmt(alt.avgPricePerM)} د.أ/م²
+                      {fmt(alt.count)} عقار متاح · {fmt(alt.avgPricePerM)} د.أ/م²
                     </p>
                   </Link>
                 ))}
@@ -195,6 +195,7 @@ function AreaPage() {
           )}
         </section>
 
+        {props.length === 0 && plots.length === 0 ? null : (
         <GlassCard className="fade-up space-y-4">
           <h2 className="flex items-center gap-2 text-lg font-bold">
             <Sparkles className="size-5 text-primary" /> مناطق مجاورة قد تناسبك
@@ -214,7 +215,7 @@ function AreaPage() {
                   </span>
                 </div>
                 <p className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <Building2 className="size-3.5 text-primary" /> {alt.count} عقار · {fmt(alt.avgPricePerM)} د.أ/م²
+                  <Building2 className="size-3.5 text-primary" /> {fmt(alt.count)} عقار · {fmt(alt.avgPricePerM)} د.أ/م²
                 </p>
                 <p className="mt-2 flex items-start gap-1.5 text-xs text-muted-foreground">
                   <TrendingUp className="mt-0.5 size-3.5 shrink-0 text-primary" /> {alt.why}
@@ -229,6 +230,7 @@ function AreaPage() {
             <ArrowRight className="size-4" /> العودة للبحث
           </Link>
         </GlassCard>
+        )}
       </main>
       <SiteFooter />
     </div>

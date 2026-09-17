@@ -221,7 +221,7 @@ function BuyerPortal() {
                         <span className="text-[11px] font-normal text-muted-foreground">{area.city}</span>
                       </span>
                       <span className="text-[11px] font-bold text-primary">
-                        {areaListingCount(area.name)} عقار · {fmt(area.avgPricePerM)} د.أ/م²
+                        {fmt(areaListingCount(area.name))} عقار · {fmt(area.avgPricePerM)} د.أ/م²
                       </span>
                     </button>
                   </li>
@@ -326,7 +326,7 @@ function BuyerPortal() {
                   <p className="rounded-xl border border-border bg-background/30 p-2">مشاريع: {area.newProjects}</p>
                 </div>
                 <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{area.reason}</p>
-                <p className="mt-2 text-xs font-bold text-primary">{areaListingCount(area.name)} عقار متاح · اضغط للتفاصيل</p>
+                <p className="mt-2 text-xs font-bold text-primary">{fmt(areaListingCount(area.name))} عقار متاح · اضغط للتفاصيل</p>
               </Link>
             ))}
           </div>
@@ -374,7 +374,7 @@ function BuyerPortal() {
                     </div>
                     <p className="mt-2 text-xs text-muted-foreground">لماذا نقترحها: {alt.why}</p>
                     <p className="mt-2 text-xs font-bold text-primary">
-                      {alt.count} عقار متاح · {fmt(alt.avgPricePerM)} د.أ/م²
+                      {fmt(alt.count)} عقار متاح · {fmt(alt.avgPricePerM)} د.أ/م²
                     </p>
                   </Link>
                 ))}
