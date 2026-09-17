@@ -14,7 +14,7 @@ import {
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { GlassCard, GoldButton, SiteFooter, SiteHeader, Stat } from "@/components/ui-kit";
@@ -284,7 +284,7 @@ function ProgressRow({ label, value }: { label: string; value: number }) {
   );
 }
 
-function SourceBadge({ label, icon }: { label: string; icon: React.ReactNode }) {
+function SourceBadge({ label, icon }: { label: string; icon: ReactNode }) {
   return (
     <span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-primary/35 bg-primary/10 px-3 py-1 text-xs font-black text-primary">
       {icon}

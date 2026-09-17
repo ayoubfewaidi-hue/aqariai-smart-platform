@@ -398,6 +398,8 @@ function PropertyCard({
         <Link
           to="/property/$id"
           params={{ id: p.id }}
+          target="_blank"
+          rel="noreferrer"
           className="inline-flex w-full items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground transition hover:brightness-110"
         >
           التحليل الكامل
