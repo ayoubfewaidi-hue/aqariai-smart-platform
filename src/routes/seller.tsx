@@ -738,7 +738,8 @@ function PdfPreview({ file, compact, className }: { file: PreviewFile; compact?:
         canvas.height = Math.floor(viewport.height);
         await page.render({ canvas, canvasContext: context, viewport }).promise;
         await loadingTask.destroy();
-      } catch {
+      } catch (error) {
+        console.error("PDF preview failed", error);
         if (!cancelled) setFailed(true);
       }
     }
