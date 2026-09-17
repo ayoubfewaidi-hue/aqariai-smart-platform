@@ -1,6 +1,6 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Bot, Heart, Search, SearchX, Send, Sparkles } from "lucide-react";
+import { Bot, Heart, Mountain, Ruler, Search, SearchX, Send, Sparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -17,6 +17,7 @@ import {
 import { askAdvisor } from "@/lib/ai.functions";
 import {
   DEFAULT_BUYER,
+  FEATURED_PLOTS,
   PROPERTIES,
   fmt,
   matchReasons,
@@ -39,6 +40,8 @@ export const Route = createFileRoute("/buyer")({
         property: "og:description",
         content: "توصيات عقارية مخصصة بدرجة مطابقة 0-100 ومستشار ذكي بدون نماذج تعبئة.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: BuyerPortal,
@@ -208,6 +211,17 @@ function BuyerPortal() {
 
         <section className="space-y-4">
           <h2 className="flex items-center gap-2 text-xl font-bold">
+            <Sparkles className="size-5 text-primary" /> القطع المميزة
+          </h2>
+          <div className="grid gap-5 md:grid-cols-2">
+            {FEATURED_PLOTS.map((plot) => (
+              <FeaturedPlotCard key={plot.id} plot={plot} />
+            ))}
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <h2 className="flex items-center gap-2 text-xl font-bold">
             <Sparkles className="size-5 text-primary" /> توصيات مخصصة لك
           </h2>
           {ranked.length === 0 ? (
@@ -271,6 +285,63 @@ function BuyerPortal() {
       </main>
       <SiteFooter />
     </div>
+  );
+}
+
+function FeaturedPlotCard({ plot }: { plot: (typeof FEATURED_PLOTS)[number] }) {
+  return (
+    <article className="glass fade-up overflow-hidden rounded-2xl transition-all duration-300 hover:-translate-y-1">
+      <div className="aerial-placeholder relative h-44">
+        <div className="absolute inset-0 bg-[color-mix(in_oklab,var(--navy-deep)_28%,transparent)]" />
+        <span className="absolute start-3 top-3 rounded-full border border-primary/35 bg-primary px-3 py-1 text-xs font-black text-primary-foreground shadow-lg">
+          Smart Score: {plot.score}/100
+        </span>
+        <div className="absolute bottom-4 right-4 left-4 flex items-end justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-bold text-primary">قطعة {plot.plot}</p>
+            <h3 className="text-2xl font-black">{plot.name}</h3>
+          </div>
+          <span className="rounded-full border border-border bg-background/45 px-3 py-1 text-xs font-bold backdrop-blur">
+            تحليل AqariAi
+          </span>
+        </div>
+      </div>
+      <div className="space-y-4 p-5">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-xl border border-border bg-background/30 p-3">
+            <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <Ruler className="size-3.5 text-primary" /> المساحة
+            </p>
+            <p className="mt-1 text-sm font-black text-primary">{plot.areaText}</p>
+          </div>
+          <div className="rounded-xl border border-border bg-background/30 p-3">
+            <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <Mountain className="size-3.5 text-primary" /> الانحدار
+            </p>
+            <p className="mt-1 text-sm font-black text-primary">{plot.slope}</p>
+          </div>
+        </div>
+        <div className="h-2 w-full overflow-hidden rounded-full bg-background/50">
+          <div className="h-full rounded-full bg-primary transition-all duration-700" style={{ width: `${plot.score}%` }} />
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {plot.cardScenarios.map((scenario) => (
+            <span key={scenario} className="rounded-full border border-border bg-background/30 px-3 py-1 text-xs font-bold text-muted-foreground">
+              {scenario}
+            </span>
+          ))}
+        </div>
+        <Link
+          to="/property/$id"
+          params={{ id: plot.id }}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex w-full items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground transition hover:brightness-110"
+        >
+          تحليل العقار
+        </Link>
+      </div>
+    </article>
   );
 }
 
