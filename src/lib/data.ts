@@ -622,6 +622,8 @@ export function recommendAreas(profile: BuyerProfile, text: string) {
 
 function extractBudget(text: string) {
   const normalizedDigits = text.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+  const thousandMatch = normalizedDigits.match(/(\d{2,4})\s*(?:ألف|الف|k)/i);
+  if (thousandMatch?.[1]) return Number(thousandMatch[1]) * 1000;
   const match = normalizedDigits.match(/(\d[\d,\.\s]{3,})\s*(?:دينار|د\.أ|jod)?/i);
   if (!match?.[1]) return 0;
   const value = Number(match[1].replace(/[^\d]/g, ""));
