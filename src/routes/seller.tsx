@@ -15,7 +15,7 @@ import {
   UploadCloud,
   X,
 } from "lucide-react";
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import {
@@ -337,11 +337,7 @@ function SellerPortal() {
                 </GoldButton>
               </div>
               {planPreview.mimeType === "application/pdf" ? (
-                <iframe
-                  src={pdfPreviewSrc(planPreview.url)}
-                  title="معاينة الصفحة الأولى من ملف PDF"
-                  className="h-72 w-full bg-background"
-                />
+                <PdfPreview file={planPreview} className="h-72 w-full" />
               ) : (
                 <img
                   src={planPreview.url}
@@ -499,11 +495,7 @@ function SellerPortal() {
                     {a.isImage ? (
                       <img src={a.url} alt={a.name} className="size-full object-cover" />
                     ) : a.isPdf ? (
-                      <iframe
-                        src={pdfPreviewSrc(a.url)}
-                        title={`معاينة ${a.name}`}
-                        className="size-24 origin-top-right scale-[0.68] bg-background"
-                      />
+                      <PdfPreview file={{ name: a.name, url: a.url, mimeType: a.mimeType }} compact className="size-full" />
                     ) : (
                       <FileText className="m-auto mt-5 size-6" />
                     )}
@@ -711,11 +703,60 @@ function FileViewer({ file, onClose }: { file: PreviewFile; onClose: () => void 
           </button>
         </div>
         {file.mimeType === "application/pdf" ? (
-          <iframe src={pdfPreviewSrc(file.url)} title={file.name} className="h-[76vh] w-full bg-background" />
+          <PdfPreview file={file} className="h-[76vh] w-full" />
         ) : (
           <img src={file.url} alt={file.name} className="max-h-[76vh] w-full object-contain p-4" />
         )}
       </div>
+    </div>
+  );
+}
+
+function PdfPreview({ file, compact, className }: { file: PreviewFile; compact?: boolean; className?: string }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function renderFirstPage() {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      try {
+        const pdfjs = await import("pdfjs-dist");
+        pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.mjs", import.meta.url).toString();
+        const pdf = await pdfjs.getDocument({ data: dataUrlToBytes(file.url) }).promise;
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({ scale: compact ? 0.32 : 1.35 });
+        const context = canvas.getContext("2d");
+        if (!context || cancelled) return;
+
+        canvas.width = Math.floor(viewport.width);
+        canvas.height = Math.floor(viewport.height);
+        await page.render({ canvasContext: context, viewport }).promise;
+        await pdf.destroy();
+      } catch {
+        if (!cancelled) setFailed(true);
+      }
+    }
+
+    void renderFirstPage();
+    return () => {
+      cancelled = true;
+    };
+  }, [compact, file.url]);
+
+  return (
+    <div className={`grid place-items-center overflow-hidden bg-background/50 ${className ?? ""}`}>
+      {failed ? (
+        <div className="text-center text-xs text-muted-foreground">
+          <FileText className="mx-auto mb-2 size-8 text-destructive" />
+          تعذر عرض الصفحة الأولى
+        </div>
+      ) : (
+        <canvas ref={canvasRef} className="max-h-full max-w-full rounded-lg bg-background" aria-label={`معاينة ${file.name}`} />
+      )}
     </div>
   );
 }
@@ -749,13 +790,18 @@ function safeFileName(name: string) {
   return name.replace(/[^\p{L}\p{N}._-]+/gu, "-").replace(/-+/g, "-").slice(0, 90);
 }
 
-function pdfPreviewSrc(url: string) {
-  return `${url}#page=1&toolbar=0&navpanes=0`;
-}
-
 function formatSize(size: number) {
   if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} KB`;
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function dataUrlToBytes(dataUrl: string) {
+  const encoded = dataUrl.split(",").at(1);
+  if (!encoded) return new Uint8Array();
+  const binary = atob(encoded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return bytes;
 }
 
 function fileToDataUrl(file: File) {
