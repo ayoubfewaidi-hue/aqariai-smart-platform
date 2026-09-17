@@ -585,11 +585,19 @@ export function recommendAreas(profile: BuyerProfile, text: string) {
   const normalized = text.replace(/\s+/g, " ");
   const isWest = /غرب|دابوق|بدر|الصويفية|شميساني|عبدون|مرج الحمام/.test(normalized);
   const isTourism = /مزرعة|سياح|شاليه|منتجع/.test(normalized);
-  const goal = isTourism ? "سياحة" : profile.goal;
+  const goal = isTourism
+    ? "سياحة"
+    : /استثمار|مردود|عائد|ROI/i.test(normalized)
+      ? "استثمار"
+      : /سكن|عائلة|مدارس|خدمات/.test(normalized)
+        ? "سكن"
+        : profile.goal;
+  const mentionedBudget = extractBudget(normalized);
+  const effectiveBudget = mentionedBudget || profile.budget;
 
   return AREA_RECOMMENDATIONS.filter((area) => !isWest || area.westAmman)
     .map((area) => {
-      const budgetFit = Math.max(0, 100 - Math.round(Math.max(0, area.avgPricePerM * 1000 - profile.budget) / 8000));
+      const budgetFit = Math.max(0, 100 - Math.round(Math.max(0, area.avgPricePerM * 1000 - effectiveBudget) / 8000));
       const goalScore = goal === "استثمار" ? area.roiScore : goal === "سكن" ? area.amenitiesScore : goal === "سياحة" ? area.tourismScore : Math.round((area.roiScore + area.amenitiesScore) / 2);
       const demandBoost = area.demand.includes("جداً") ? 8 : area.demand.includes("عالي") ? 5 : 2;
       return {
@@ -600,7 +608,15 @@ export function recommendAreas(profile: BuyerProfile, text: string) {
       };
     })
     .sort((a, b) => b.match - a.match)
-    .slice(0, isWest ? 5 : 4);
+    .slice(0, mentionedBudget ? 3 : isWest ? 5 : 4);
+}
+
+function extractBudget(text: string) {
+  const normalizedDigits = text.replace(/[٠-٩]/g, (d) => String("٠١٢٣٤٥٦٧٨٩".indexOf(d)));
+  const match = normalizedDigits.match(/(\d[\d,\.\s]{3,})\s*(?:دينار|د\.أ|jod)?/i);
+  if (!match?.[1]) return 0;
+  const value = Number(match[1].replace(/[^\d]/g, ""));
+  return value >= 50000 ? value : 0;
 }
 
 export function fmt(n: number) {
