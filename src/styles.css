@@ -127,6 +127,22 @@
   color: transparent;
 }
 
+@utility aerial-placeholder {
+  background:
+    linear-gradient(135deg, color-mix(in oklab, var(--navy-deep) 92%, transparent), transparent 52%),
+    repeating-linear-gradient(
+      28deg,
+      color-mix(in oklab, var(--emerald) 32%, transparent) 0 16px,
+      color-mix(in oklab, var(--card) 72%, transparent) 16px 34px,
+      color-mix(in oklab, var(--gold) 14%, transparent) 34px 38px
+    ),
+    var(--navy-deep);
+}
+
+@utility gauge-glow {
+  animation: gauge-breathe 2.8s ease-in-out infinite;
+}
+
 @utility fade-up {
   animation: fade-up 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
@@ -139,6 +155,16 @@
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+@keyframes gauge-breathe {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 0 color-mix(in oklab, var(--gold) 0%, transparent));
+  }
+  50% {
+    filter: drop-shadow(0 0 22px color-mix(in oklab, var(--gold) 22%, transparent));
   }
 }
 
