@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   BadgeCheck,
   CheckCircle2,
+  Eye,
   FileImage,
   FileText,
   Hash,
@@ -12,8 +13,9 @@ import {
   ScanLine,
   Trash2,
   UploadCloud,
+  X,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import {
@@ -28,6 +30,7 @@ import {
   Skeleton,
   Stat,
 } from "@/components/ui-kit";
+import { supabase } from "@/integrations/supabase/client";
 import { extractPlanData, generateMarketing, type MarketingPackage, type PlanData } from "@/lib/ai.functions";
 import { fmt } from "@/lib/data";
 
@@ -45,6 +48,8 @@ export const Route = createFileRoute("/seller")({
         property: "og:description",
         content: "استخراج بيانات المخطط، مرفقات موثّقة، وتسويق تلقائي لعقارك.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: SellerPortal,
@@ -81,8 +86,20 @@ type Attachment = {
   name: string;
   category: string;
   url: string;
+  mimeType: string;
+  size: number;
+  path?: string;
   isImage: boolean;
+  isPdf: boolean;
   verified: boolean;
+  progress: number;
+  status: "uploading" | "uploaded" | "error";
+};
+
+type PreviewFile = {
+  name: string;
+  url: string;
+  mimeType: string;
 };
 
 const CATEGORIES = [
@@ -93,11 +110,15 @@ const CATEGORIES = [
   "مستندات أخرى",
 ];
 
+const ACCEPTED_FILE_TYPES = ".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg";
+const MAX_UPLOAD_SIZE = 15 * 1024 * 1024;
+const MAX_UPLOAD_FILES = 5;
+
 function SellerPortal() {
   const extract = useServerFn(extractPlanData);
   const marketing = useServerFn(generateMarketing);
 
-  const [planPreview, setPlanPreview] = useState<string | null>(null);
+  const [planPreview, setPlanPreview] = useState<PreviewFile | null>(null);
   const [extracting, setExtracting] = useState(false);
   const [extracted, setExtracted] = useState<PlanData | null>(null);
   const [confirmed, setConfirmed] = useState(false);
@@ -112,29 +133,32 @@ function SellerPortal() {
   const [pkgError, setPkgError] = useState<string | null>(null);
   const [published, setPublished] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [viewer, setViewer] = useState<PreviewFile | null>(null);
 
   const planInput = useRef<HTMLInputElement>(null);
   const filesInput = useRef<HTMLInputElement>(null);
 
   const set = (k: keyof PropertyForm) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
 
-  async function handlePlanFile(file: File) {
-    if (!file.type.startsWith("image/")) {
-      toast.error("يرجى رفع صورة للمخطط (JPG أو PNG).");
-      return;
-    }
-    if (file.size > 8 * 1024 * 1024) {
-      toast.error("حجم الصورة كبير، الحد الأقصى 8 ميجابايت.");
-      return;
-    }
-    const dataUrl = await fileToDataUrl(file);
-    setPlanPreview(dataUrl);
+  async function handlePlanFiles(fileList: FileList | File[]) {
+    const files = validateFiles(Array.from(fileList));
+    const primary = files.at(0);
+    if (!primary) return;
+
+    const dataUrl = await fileToDataUrl(primary.file);
+    setPlanPreview({ name: primary.file.name, url: dataUrl, mimeType: primary.mimeType });
     setExtracted(null);
     setConfirmed(false);
     setError(null);
+    files.forEach((item, index) => {
+      if (index === 0) void uploadAttachment(item.file, "صورة المخطط", dataUrl, primary.mimeType);
+      else void uploadAttachment(item.file, "صورة المخطط", undefined, item.mimeType);
+    });
     setExtracting(true);
     try {
-      const data = await extract({ data: { imageDataUrl: dataUrl } });
+      const data = await extract({
+        data: { fileDataUrl: dataUrl, fileName: primary.file.name, mimeType: primary.mimeType },
+      });
       setExtracted(data);
       setForm((f) => ({
         ...f,
@@ -145,20 +169,9 @@ function SellerPortal() {
         coordinates: data.coordinates || f.coordinates,
         zoning: data.zoning || f.zoning,
       }));
-      setAttachments((a) => [
-        ...a,
-        {
-          id: crypto.randomUUID(),
-          name: file.name,
-          category: "صورة المخطط",
-          url: dataUrl,
-          isImage: true,
-          verified: true,
-        },
-      ]);
-      toast.success("تم استخراج بيانات المخطط");
+      toast.success("تم استخراج بيانات الملف");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "تعذر تحليل المخطط.");
+      setError(e instanceof Error ? e.message : "تعذر تحليل الملف.");
     } finally {
       setExtracting(false);
     }
@@ -166,24 +179,65 @@ function SellerPortal() {
 
   async function handleAttachments(files: FileList | null) {
     if (!files?.length) return;
-    const next: Attachment[] = [];
-    for (const file of Array.from(files).slice(0, 8)) {
-      if (file.size > 8 * 1024 * 1024) {
-        toast.error(`${file.name}: الحجم أكبر من 8 ميجابايت`);
-        continue;
-      }
-      const isImage = file.type.startsWith("image/");
-      next.push({
-        id: crypto.randomUUID(),
+    const valid = validateFiles(Array.from(files));
+    valid.forEach((item) => void uploadAttachment(item.file, category, undefined, item.mimeType));
+  }
+
+  async function uploadAttachment(file: File, selectedCategory: string, knownDataUrl?: string, knownMimeType?: string) {
+    const mimeType = knownMimeType || getMimeType(file);
+    if (!mimeType) return;
+    const dataUrl = knownDataUrl || (await fileToDataUrl(file));
+    const id = crypto.randomUUID();
+    const isImage = mimeType.startsWith("image/");
+    const isPdf = mimeType === "application/pdf";
+    setAttachments((items) => [
+      ...items,
+      {
+        id,
         name: file.name,
-        category,
-        url: isImage ? await fileToDataUrl(file) : "",
+        category: selectedCategory,
+        url: dataUrl,
+        mimeType,
+        size: file.size,
         isImage,
+        isPdf,
         verified: false,
+        progress: 8,
+        status: "uploading",
+      },
+    ]);
+
+    const timer = setInterval(() => {
+      setAttachments((items) =>
+        items.map((item) =>
+          item.id === id && item.status === "uploading"
+            ? { ...item, progress: Math.min(88, item.progress + 16) }
+            : item,
+        ),
+      );
+    }, 240);
+
+    try {
+      const path = `seller-uploads/${Date.now()}-${crypto.randomUUID()}-${safeFileName(file.name)}`;
+      const { error: uploadError } = await supabase.storage.from("seller-documents").upload(path, file, {
+        contentType: mimeType,
+        upsert: false,
       });
+      if (uploadError) throw uploadError;
+      setAttachments((items) =>
+        items.map((item) =>
+          item.id === id ? { ...item, path, progress: 100, status: "uploaded", verified: true } : item,
+        ),
+      );
+      toast.success(`${file.name}: تم الرفع والتحقق`);
+    } catch (uploadError) {
+      setAttachments((items) =>
+        items.map((item) => (item.id === id ? { ...item, progress: 100, status: "error", verified: false } : item)),
+      );
+      toast.error(uploadError instanceof Error ? uploadError.message : `تعذر رفع ${file.name}`);
+    } finally {
+      clearInterval(timer);
     }
-    setAttachments((a) => [...a, ...next]);
-    if (next.length) toast.success(`تم إضافة ${next.length} مرفق`);
   }
 
   const areaNum = Number(form.area.replace(/[^\d.]/g, "")) || 0;
@@ -223,7 +277,7 @@ function SellerPortal() {
         <SectionTitle
           eyebrow="بوابة البائع"
           title="ارفع مخطط الأرض ودع الذكاء يكمل الباقي"
-          desc="خطوة واحدة للرفع، والاستخراج والتحليل والتسويق تحدث تلقائياً."
+          desc="ارفع وثيقة سند أو مخططاً تنظيمياً أو سجلاً — ندعم جميع الصيغ"
         />
 
         {/* 1. Upload plan */}
@@ -238,41 +292,69 @@ function SellerPortal() {
             onDrop={(e) => {
               e.preventDefault();
               setDragging(false);
-              const file = e.dataTransfer.files?.[0];
-              if (file) void handlePlanFile(file);
+              if (e.dataTransfer.files?.length) void handlePlanFiles(e.dataTransfer.files);
             }}
             onClick={() => planInput.current?.click()}
-            className={`cursor-pointer rounded-2xl border-2 border-dashed p-8 text-center transition ${
+            className={`cursor-pointer rounded-2xl border-2 border-dashed p-8 text-center transition-all duration-300 ${
               dragging ? "border-primary bg-primary/10" : "border-border hover:border-primary/60"
             }`}
           >
-            <UploadCloud className="mx-auto size-9 text-primary" />
-            <p className="mt-3 text-sm font-bold">اسحب صورة المخطط وأفلتها هنا</p>
-            <p className="mt-1 text-xs text-muted-foreground">أو اضغط للاختيار — JPG / PNG حتى 8MB</p>
+            <div className="mx-auto grid size-16 place-items-center rounded-2xl border border-primary/35 bg-primary/10">
+              <UploadCloud className="size-8 text-primary" />
+            </div>
+            <p className="mt-4 text-base font-black">اسحب المخطط هنا أو اختر ملفاً</p>
+            <p className="mt-1 text-sm text-muted-foreground">PDF / PNG / JPG — بحد أقصى 15 ميجابايت</p>
+            <div className="mt-4 flex justify-center gap-2">
+              <span className="inline-flex items-center gap-1 rounded-full bg-destructive/12 px-3 py-1 text-xs font-bold text-destructive">
+                <FileText className="size-3.5" /> PDF
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-full bg-chart-3/15 px-3 py-1 text-xs font-bold text-chart-3">
+                <FileImage className="size-3.5" /> Images
+              </span>
+            </div>
             <input
               ref={planInput}
               type="file"
-              accept="image/*"
+              accept={ACCEPTED_FILE_TYPES}
+              multiple
               className="hidden"
               onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) void handlePlanFile(file);
+                if (e.target.files?.length) void handlePlanFiles(e.target.files);
                 e.target.value = "";
               }}
             />
           </div>
 
           {planPreview ? (
-            <img
-              src={planPreview}
-              alt="معاينة مخطط الأرض المرفوع"
-              className="max-h-64 w-full rounded-xl border border-border object-contain"
-            />
+            <div className="fade-up overflow-hidden rounded-2xl border border-border bg-background/30">
+              <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+                <div className="flex min-w-0 items-center gap-2">
+                  <FileBadge mimeType={planPreview.mimeType} />
+                  <p className="truncate text-sm font-bold">{planPreview.name}</p>
+                </div>
+                <GoldButton variant="outline" className="px-3 py-2" onClick={() => setViewer(planPreview)}>
+                  <Eye className="size-4" /> عرض
+                </GoldButton>
+              </div>
+              {planPreview.mimeType === "application/pdf" ? (
+                <iframe
+                  src={pdfPreviewSrc(planPreview.url)}
+                  title="معاينة الصفحة الأولى من ملف PDF"
+                  className="h-72 w-full bg-background"
+                />
+              ) : (
+                <img
+                  src={planPreview.url}
+                  alt="معاينة مخطط الأرض المرفوع"
+                  className="max-h-72 w-full object-contain"
+                />
+              )}
+            </div>
           ) : null}
 
           {extracting ? (
             <div className="space-y-2">
-              <p className="text-sm text-primary">جارٍ قراءة المخطط واستخراج البيانات…</p>
+              <p className="text-sm text-primary">جارٍ قراءة الملف واستخراج البيانات…</p>
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-2/3" />
             </div>
@@ -299,7 +381,7 @@ function SellerPortal() {
                 ].map(([k, v]) => (
                   <div key={k} className="rounded-xl border border-border bg-background/30 px-3 py-2">
                     <p className="text-[11px] text-muted-foreground">{k}</p>
-                    <p className="text-sm font-semibold">{v || "غير ظاهر في المخطط"}</p>
+                    <p className="text-sm font-semibold">{v || "غير ظاهر في الملف"}</p>
                   </div>
                 ))}
               </div>
@@ -370,6 +452,7 @@ function SellerPortal() {
           <div className="flex flex-wrap gap-2">
             {CATEGORIES.map((c) => (
               <button
+                type="button"
                 key={c}
                 onClick={() => setCategory(c)}
                 className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
@@ -389,6 +472,7 @@ function SellerPortal() {
             ref={filesInput}
             type="file"
             multiple
+            accept={ACCEPTED_FILE_TYPES}
             className="hidden"
             onChange={(e) => {
               void handleAttachments(e.target.files);
@@ -405,36 +489,68 @@ function SellerPortal() {
           ) : (
             <ul className="grid gap-3 sm:grid-cols-2">
               {attachments.map((a) => (
-                <li key={a.id} className="flex items-center gap-3 rounded-xl border border-border bg-background/30 p-3">
-                  {a.isImage && a.url ? (
-                    <img src={a.url} alt={a.name} className="size-14 rounded-lg object-cover" />
-                  ) : (
-                    <span className="grid size-14 place-items-center rounded-lg bg-accent text-primary">
-                      <FileText className="size-6" />
-                    </span>
-                  )}
+                <li key={a.id} className="grid gap-3 rounded-xl border border-border bg-background/30 p-3 sm:grid-cols-[4.5rem_1fr_auto_auto] sm:items-center">
+                  <button
+                    type="button"
+                    onClick={() => setViewer({ name: a.name, url: a.url, mimeType: a.mimeType })}
+                    className="relative size-16 overflow-hidden rounded-lg border border-border bg-accent text-primary"
+                    aria-label={`عرض ${a.name}`}
+                  >
+                    {a.isImage ? (
+                      <img src={a.url} alt={a.name} className="size-full object-cover" />
+                    ) : a.isPdf ? (
+                      <iframe
+                        src={pdfPreviewSrc(a.url)}
+                        title={`معاينة ${a.name}`}
+                        className="size-24 origin-top-right scale-[0.68] bg-background"
+                      />
+                    ) : (
+                      <FileText className="m-auto mt-5 size-6" />
+                    )}
+                  </button>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">{a.name}</p>
-                    <p className="text-[11px] text-muted-foreground">{a.category}</p>
+                    <div className="flex items-center gap-2">
+                      <FileBadge mimeType={a.mimeType} />
+                      <p className="truncate text-sm font-semibold">{a.name}</p>
+                    </div>
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      {a.category} · {formatSize(a.size)}
+                    </p>
+                    <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-background/60">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          a.status === "error" ? "bg-destructive" : "bg-secondary"
+                        }`}
+                        style={{ width: `${a.progress}%` }}
+                      />
+                    </div>
                   </div>
                   <button
-                    onClick={() =>
-                      setAttachments((list) =>
-                        list.map((x) => (x.id === a.id ? { ...x, verified: !x.verified } : x)),
-                      )
-                    }
-                    className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold transition ${
-                      a.verified
-                        ? "bg-secondary text-secondary-foreground"
-                        : "border border-primary/40 text-primary hover:bg-primary/10"
-                    }`}
+                    type="button"
+                    onClick={() => setViewer({ name: a.name, url: a.url, mimeType: a.mimeType })}
+                    className="inline-flex items-center justify-center gap-1 rounded-full border border-primary/40 px-2.5 py-1 text-[11px] font-bold text-primary transition hover:bg-primary/10"
                   >
-                    <BadgeCheck className="size-3.5" /> {a.verified ? "موثّق" : "تحقق"}
+                    <Eye className="size-3.5" /> عرض
                   </button>
                   <button
+                    type="button"
+                    disabled={a.status === "uploading"}
+                    className={`inline-flex items-center justify-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold transition disabled:opacity-70 ${
+                      a.status === "error"
+                        ? "border border-destructive/40 text-destructive"
+                        : a.verified
+                          ? "bg-secondary text-secondary-foreground"
+                          : "border border-primary/40 text-primary"
+                    }`}
+                  >
+                    <BadgeCheck className="size-3.5" />
+                    {a.status === "uploading" ? "جارٍ الرفع" : a.status === "error" ? "لم يكتمل" : "تحقق"}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setAttachments((list) => list.filter((x) => x.id !== a.id))}
                     aria-label={`حذف ${a.name}`}
-                    className="text-muted-foreground transition hover:text-destructive"
+                    className="justify-self-start text-muted-foreground transition hover:text-destructive sm:justify-self-center"
                   >
                     <Trash2 className="size-4" />
                   </button>
@@ -443,8 +559,7 @@ function SellerPortal() {
             </ul>
           )}
           <p className="text-[11px] text-muted-foreground">
-            تُحفظ المرفقات في هذه الجلسة فقط. لتخزين دائم ومشاركة مع المشترين نحتاج تشغيل التخزين
-            السحابي للمنصة.
+            تُحفظ المرفقات في مساحة آمنة خاصة، وتظهر شارة تحقق بعد اكتمال الرفع بنجاح.
           </p>
         </GlassCard>
 
@@ -544,11 +659,12 @@ function SellerPortal() {
         </GlassCard>
       </main>
       <SiteFooter />
+      {viewer ? <FileViewer file={viewer} onClose={() => setViewer(null)} /> : null}
     </div>
   );
 }
 
-function StepHead({ n, title, icon }: { n: number; title: string; icon: React.ReactNode }) {
+function StepHead({ n, title, icon }: { n: number; title: string; icon: ReactNode }) {
   return (
     <div className="flex items-center gap-3">
       <span className="grid size-8 place-items-center rounded-xl bg-primary/15 text-sm font-black text-primary">
@@ -560,6 +676,86 @@ function StepHead({ n, title, icon }: { n: number; title: string; icon: React.Re
       </h3>
     </div>
   );
+}
+
+function FileBadge({ mimeType }: { mimeType: string }) {
+  const isPdf = mimeType === "application/pdf";
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-black ${
+        isPdf ? "bg-destructive/12 text-destructive" : "bg-chart-3/15 text-chart-3"
+      }`}
+    >
+      {isPdf ? <FileText className="size-3" /> : <FileImage className="size-3" />}
+      {isPdf ? "PDF" : "IMG"}
+    </span>
+  );
+}
+
+function FileViewer({ file, onClose }: { file: PreviewFile; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-xl">
+      <div className="glass-strong flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl">
+        <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <FileBadge mimeType={file.mimeType} />
+            <p className="truncate text-sm font-bold">{file.name}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="إغلاق المعاينة"
+            className="grid size-9 place-items-center rounded-full border border-border text-muted-foreground transition hover:bg-accent hover:text-foreground"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+        {file.mimeType === "application/pdf" ? (
+          <iframe src={pdfPreviewSrc(file.url)} title={file.name} className="h-[76vh] w-full bg-background" />
+        ) : (
+          <img src={file.url} alt={file.name} className="max-h-[76vh] w-full object-contain p-4" />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function validateFiles(files: File[]) {
+  if (files.length > MAX_UPLOAD_FILES) toast.error(`يمكن رفع ${MAX_UPLOAD_FILES} ملفات كحد أقصى في كل مرة.`);
+  return files.slice(0, MAX_UPLOAD_FILES).flatMap((file) => {
+    const mimeType = getMimeType(file);
+    if (!mimeType) {
+      toast.error(`${file.name}: ندعم PDF و PNG و JPG فقط`);
+      return [];
+    }
+    if (file.size > MAX_UPLOAD_SIZE) {
+      toast.error(`${file.name}: الحجم أكبر من 15 ميجابايت`);
+      return [];
+    }
+    return [{ file, mimeType }];
+  });
+}
+
+function getMimeType(file: File) {
+  if (["application/pdf", "image/png", "image/jpeg"].includes(file.type)) return file.type;
+  const name = file.name.toLowerCase();
+  if (name.endsWith(".pdf")) return "application/pdf";
+  if (name.endsWith(".png")) return "image/png";
+  if (name.endsWith(".jpg") || name.endsWith(".jpeg")) return "image/jpeg";
+  return "";
+}
+
+function safeFileName(name: string) {
+  return name.replace(/[^\p{L}\p{N}._-]+/gu, "-").replace(/-+/g, "-").slice(0, 90);
+}
+
+function pdfPreviewSrc(url: string) {
+  return `${url}#page=1&toolbar=0&navpanes=0`;
+}
+
+function formatSize(size: number) {
+  if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function fileToDataUrl(file: File) {
