@@ -1,0 +1,337 @@
+import { Link, createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { Bot, Heart, Search, SearchX, Send, Sparkles } from "lucide-react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+
+import {
+  EmptyState,
+  ErrorNote,
+  GlassCard,
+  GoldButton,
+  SectionTitle,
+  SiteFooter,
+  SiteHeader,
+  Skeleton,
+} from "@/components/ui-kit";
+import { askAdvisor } from "@/lib/ai.functions";
+import {
+  DEFAULT_BUYER,
+  PROPERTIES,
+  fmt,
+  matchReasons,
+  matchScore,
+  type BuyerProfile,
+  type Property,
+} from "@/lib/data";
+
+export const Route = createFileRoute("/buyer")({
+  head: () => ({
+    meta: [
+      { title: "بوابة المشتري | عقاري AI" },
+      {
+        name: "description",
+        content:
+          "ابحث أو حاور المستشار العقاري الذكي، وشاهد العقارات مرتبة بدرجة مطابقة تناسب ميزانيتك ومنطقتك وهدفك.",
+      },
+      { property: "og:title", content: "بوابة المشتري | عقاري AI" },
+      {
+        property: "og:description",
+        content: "توصيات عقارية مخصصة بدرجة مطابقة 0-100 ومستشار ذكي بدون نماذج تعبئة.",
+      },
+    ],
+  }),
+  component: BuyerPortal,
+});
+
+const AREAS = ["عبدون", "دابوق", "عمّان", "الزرقاء", "إربد"];
+const GOALS: BuyerProfile["goal"][] = ["سكن", "استثمار", "تطوير"];
+
+type Msg = { role: "user" | "assistant"; text: string };
+
+function BuyerPortal() {
+  const advisor = useServerFn(askAdvisor);
+  const [profile, setProfile] = useState<BuyerProfile>(DEFAULT_BUYER);
+  const [query, setQuery] = useState("");
+  const [messages, setMessages] = useState<Msg[]>([
+    {
+      role: "assistant",
+      text: "مرحباً! أخبرني عن ميزانيتك والمنطقة التي تفضلها وهدفك (سكن أو استثمار) وسأرشّح لك الأنسب من العقارات المتاحة.",
+    },
+  ]);
+  const [input, setInput] = useState("");
+  const [thinking, setThinking] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
+
+  const ranked = useMemo(() => {
+    const q = query.trim();
+    return PROPERTIES.filter(
+      (p) =>
+        !q ||
+        `${p.title} ${p.village} ${p.city} ${p.type} ${p.zoning} ${p.basin}`.includes(q),
+    )
+      .map((p) => ({ p, score: matchScore(p, { ...profile, searches: [q] }) }))
+      .sort((a, b) => b.score - a.score);
+  }, [profile, query]);
+
+  const toggleFav = (id: string) =>
+    setProfile((pr) => ({
+      ...pr,
+      favorites: pr.favorites.includes(id)
+        ? pr.favorites.filter((f) => f !== id)
+        : [...pr.favorites, id],
+    }));
+
+  const toggleArea = (a: string) =>
+    setProfile((pr) => ({
+      ...pr,
+      areas: pr.areas.includes(a) ? pr.areas.filter((x) => x !== a) : [...pr.areas, a],
+    }));
+
+  async function send() {
+    const text = input.trim();
+    if (!text || thinking) return;
+    setInput("");
+    setChatError(null);
+    const history = messages.slice(-8);
+    setMessages((m) => [...m, { role: "user", text }]);
+    setThinking(true);
+    try {
+      const { reply } = await advisor({
+        data: {
+          message: text,
+          history,
+          catalog: PROPERTIES.map(
+            (p) =>
+              `${p.title} | ${p.village}-${p.city} | ${p.type} | ${p.area}م² | ${p.price} د.أ | تنظيم ${p.zoning} | نمو ${p.growth}%`,
+          ).join("\n"),
+          profile: `الميزانية: ${profile.budget} د.أ | المناطق: ${
+            profile.areas.join("، ") || "غير محددة"
+          } | أفراد العائلة: ${profile.familySize} | الهدف: ${profile.goal} | المفضلة: ${
+            profile.favorites.join("، ") || "لا شيء"
+          }`,
+        },
+      });
+      setMessages((m) => [...m, { role: "assistant", text: reply }]);
+    } catch (e) {
+      setChatError(e instanceof Error ? e.message : "تعذر الاتصال بالمستشار.");
+    } finally {
+      setThinking(false);
+    }
+  }
+
+  return (
+    <div className="min-h-screen">
+      <SiteHeader />
+      <main className="mx-auto max-w-6xl space-y-10 px-4 py-10">
+        <SectionTitle
+          eyebrow="بوابة المشتري"
+          title="ابحث أو حاور المستشار الذكي"
+          desc="نرتّب العقارات حسب درجة مطابقتها لميزانيتك ومنطقتك وهدفك — بدون أي نماذج إدخال."
+        />
+
+        <GlassCard className="fade-up space-y-4">
+          <div className="relative">
+            <Search className="pointer-events-none absolute end-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="ابحث: دابوق، فيلا، أرض، تجاري…"
+              className="w-full rounded-xl border border-input bg-background/40 px-4 py-3 pe-10 text-sm outline-none focus:border-primary/70 focus:ring-2 focus:ring-primary/25"
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <label className="space-y-2">
+              <span className="text-xs font-semibold text-muted-foreground">
+                الميزانية: {fmt(profile.budget)} د.أ
+              </span>
+              <input
+                type="range"
+                min={50000}
+                max={1200000}
+                step={10000}
+                value={profile.budget}
+                onChange={(e) => setProfile((p) => ({ ...p, budget: Number(e.target.value) }))}
+                className="w-full accent-[var(--gold)]"
+              />
+            </label>
+            <label className="space-y-2">
+              <span className="text-xs font-semibold text-muted-foreground">
+                أفراد العائلة: {profile.familySize}
+              </span>
+              <input
+                type="range"
+                min={1}
+                max={8}
+                value={profile.familySize}
+                onChange={(e) => setProfile((p) => ({ ...p, familySize: Number(e.target.value) }))}
+                className="w-full accent-[var(--gold)]"
+              />
+            </label>
+            <div className="space-y-2">
+              <span className="text-xs font-semibold text-muted-foreground">الهدف</span>
+              <div className="flex gap-1.5">
+                {GOALS.map((g) => (
+                  <button
+                    key={g}
+                    onClick={() => setProfile((p) => ({ ...p, goal: g }))}
+                    className={`flex-1 rounded-lg px-2 py-2 text-xs font-bold transition ${
+                      profile.goal === g
+                        ? "bg-primary text-primary-foreground"
+                        : "border border-border text-muted-foreground hover:bg-accent"
+                    }`}
+                  >
+                    {g}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {AREAS.map((a) => (
+              <button
+                key={a}
+                onClick={() => toggleArea(a)}
+                className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
+                  profile.areas.includes(a)
+                    ? "bg-secondary text-secondary-foreground"
+                    : "border border-border text-muted-foreground hover:bg-accent"
+                }`}
+              >
+                {a}
+              </button>
+            ))}
+          </div>
+        </GlassCard>
+
+        <section className="space-y-4">
+          <h2 className="flex items-center gap-2 text-xl font-bold">
+            <Sparkles className="size-5 text-primary" /> توصيات مخصصة لك
+          </h2>
+          {ranked.length === 0 ? (
+            <EmptyState
+              icon={<SearchX className="size-8" />}
+              title="لا نتائج مطابقة لبحثك"
+              desc="جرّب كلمة أوسع مثل «أرض» أو «عمّان»، أو ارفع سقف الميزانية."
+              action={<GoldButton variant="outline" onClick={() => setQuery("")}>مسح البحث</GoldButton>}
+            />
+          ) : (
+            <div className="grid gap-5 md:grid-cols-2">
+              {ranked.map(({ p, score }) => (
+                <PropertyCard
+                  key={p.id}
+                  property={p}
+                  score={score}
+                  reasons={matchReasons(p, profile)}
+                  fav={profile.favorites.includes(p.id)}
+                  onFav={() => toggleFav(p.id)}
+                />
+              ))}
+            </div>
+          )}
+        </section>
+
+        <GlassCard strong className="fade-up space-y-4">
+          <h2 className="flex items-center gap-2 text-lg font-bold">
+            <Bot className="size-5 text-primary" /> المستشار العقاري الذكي
+          </h2>
+          <div className="max-h-80 space-y-3 overflow-y-auto pe-1">
+            {messages.map((m, i) => (
+              <div
+                key={i}
+                className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                  m.role === "user"
+                    ? "ms-auto border border-primary/35 bg-primary/15 text-foreground"
+                    : "border border-border bg-background/35"
+                }`}
+              >
+                {m.text}
+              </div>
+            ))}
+            {thinking ? <Skeleton className="h-14 w-2/3" /> : null}
+          </div>
+          {chatError ? <ErrorNote message={chatError} /> : null}
+          <div className="flex gap-2">
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void send();
+              }}
+              placeholder="مثال: ميزانيتي 500 ألف وأبحث عن أرض للاستثمار"
+              className="flex-1 rounded-xl border border-input bg-background/40 px-4 py-3 text-sm outline-none focus:border-primary/70"
+            />
+            <GoldButton onClick={() => void send()} loading={thinking}>
+              <Send className="size-4" /> إرسال
+            </GoldButton>
+          </div>
+        </GlassCard>
+      </main>
+      <SiteFooter />
+    </div>
+  );
+}
+
+function PropertyCard({
+  property: p,
+  score,
+  reasons,
+  fav,
+  onFav,
+}: {
+  property: Property;
+  score: number;
+  reasons: string[];
+  fav: boolean;
+  onFav: () => void;
+}) {
+  return (
+    <article className="glass fade-up overflow-hidden rounded-2xl transition-all duration-300 hover:-translate-y-1">
+      <div className="relative">
+        <img src={p.image} alt={p.title} loading="lazy" className="h-44 w-full object-cover" />
+        <span className="absolute end-3 top-3 rounded-full bg-[color-mix(in_oklab,var(--navy-deep)_75%,transparent)] px-3 py-1 text-xs font-black text-primary backdrop-blur">
+          مطابقة {score}%
+        </span>
+        <button
+          onClick={() => {
+            onFav();
+            toast.success(fav ? "أزلنا العقار من المفضلة" : "أضفنا العقار للمفضلة");
+          }}
+          aria-label="إضافة للمفضلة"
+          className="absolute start-3 top-3 grid size-9 place-items-center rounded-full bg-[color-mix(in_oklab,var(--navy-deep)_70%,transparent)] backdrop-blur transition hover:scale-105"
+        >
+          <Heart className={`size-4 ${fav ? "fill-primary text-primary" : "text-foreground"}`} />
+        </button>
+      </div>
+      <div className="space-y-3 p-5">
+        <div>
+          <h3 className="text-base font-bold">{p.title}</h3>
+          <p className="text-xs text-muted-foreground">
+            {p.village} — {p.city} · {p.area} م² · {p.zoning}
+          </p>
+        </div>
+        <p className="text-lg font-black text-primary">{fmt(p.price)} د.أ</p>
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-background/50">
+          <div
+            className="h-full rounded-full bg-primary transition-all duration-700"
+            style={{ width: `${score}%` }}
+          />
+        </div>
+        <ul className="space-y-1 text-xs text-muted-foreground">
+          {reasons.map((r) => (
+            <li key={r}>• {r}</li>
+          ))}
+        </ul>
+        <Link
+          to="/property/$id"
+          params={{ id: p.id }}
+          className="inline-flex w-full items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-foreground transition hover:brightness-110"
+        >
+          التحليل الكامل
+        </Link>
+      </div>
+    </article>
+  );
+}
