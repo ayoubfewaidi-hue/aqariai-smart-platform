@@ -1,7 +1,7 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { Bot, BadgeCheck, Heart, MapPin, Mountain, Ruler, Search, SearchX, Send, Share2, Sparkles } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import {
@@ -19,6 +19,7 @@ import {
   DEFAULT_BUYER,
   FEATURED_PLOTS,
   PROPERTIES,
+  SELLER_DRAFT_STORAGE_KEY,
   fmt,
   matchReasons,
   matchScore,
@@ -26,6 +27,7 @@ import {
   smartPropertyScore,
   type BuyerProfile,
   type Property,
+  type SellerDraftProperty,
 } from "@/lib/data";
 
 export const Route = createFileRoute("/buyer")({
@@ -66,6 +68,16 @@ function BuyerPortal() {
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
+  const [sellerDraft, setSellerDraft] = useState<SellerDraftProperty | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SELLER_DRAFT_STORAGE_KEY);
+      setSellerDraft(raw ? (JSON.parse(raw) as SellerDraftProperty) : null);
+    } catch {
+      setSellerDraft(null);
+    }
+  }, []);
 
   const conversationText = useMemo(
     () => `${query} ${input} ${messages.map((m) => m.text).join(" ")}`,
@@ -73,17 +85,21 @@ function BuyerPortal() {
   );
 
   const recommendedAreas = useMemo(() => recommendAreas(profile, conversationText), [conversationText, profile]);
+  const allProperties = useMemo<Property[]>(
+    () => (sellerDraft ? [sellerDraft, ...PROPERTIES] : PROPERTIES),
+    [sellerDraft],
+  );
 
   const ranked = useMemo(() => {
     const q = query.trim();
-    return PROPERTIES.filter(
+    return allProperties.filter(
       (p) =>
         !q ||
         `${p.title} ${p.village} ${p.city} ${p.type} ${p.zoning} ${p.basin}`.includes(q),
     )
       .map((p) => ({ p, score: matchScore(p, { ...profile, searches: [q] }) }))
       .sort((a, b) => b.score - a.score);
-  }, [profile, query]);
+  }, [allProperties, profile, query]);
 
   const toggleFav = (id: string) =>
     setProfile((pr) => ({
@@ -112,10 +128,17 @@ function BuyerPortal() {
         data: {
           message: text,
           history,
-          catalog: PROPERTIES.map(
+          catalog: [
+            ...allProperties.map(
             (p) =>
               `${p.title} | ${p.village}-${p.city} | ${p.type} | ${p.area}م² | ${p.price} د.أ | تنظيم ${p.zoning} | نمو ${p.growth}%`,
-          ).join("\n"),
+            ),
+            ...FEATURED_PLOTS.map(
+              (p) =>
+                `قطعة ${p.name} ${p.plot} | أرض | ${p.areaText} | ${p.total} د.أ | ${p.pricePerM} د.أ/م² | Smart Score ${p.score} | ${p.zoning}`,
+            ),
+            `مناطق ذكية مقترحة الآن: ${recommendedAreas.map((a) => `${a.name} مطابقة ${a.match}% وسعر ${a.avgPricePerM} د.أ/م²`).join("؛ ")}`,
+          ].join("\n"),
           profile: `الميزانية: ${profile.budget} د.أ | المناطق: ${
             profile.areas.join("، ") || "غير محددة"
           } | أفراد العائلة: ${profile.familySize} | الهدف: ${profile.goal} | المفضلة: ${
