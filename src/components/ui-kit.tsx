@@ -113,7 +113,14 @@ export function Stat({ label, value, hint }: { label: string; value: string; hin
   return (
     <div className="rounded-xl border border-border bg-background/30 p-4">
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 text-lg font-bold text-primary">{value}</p>
+      <p
+        className={cn(
+          "mt-1 font-bold text-primary",
+          value.length > 26 ? "text-[13px] leading-relaxed" : "text-lg",
+        )}
+      >
+        {value}
+      </p>
       {hint ? <p className="mt-0.5 text-[11px] text-muted-foreground">{hint}</p> : null}
     </div>
   );
