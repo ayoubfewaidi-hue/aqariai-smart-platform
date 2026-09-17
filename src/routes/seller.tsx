@@ -372,7 +372,7 @@ function SellerPortal() {
       price: calculatedTotal,
       zoning: form.zoningType || form.zoning || DEFAULT_REGULATORY_DATA.type,
       type: safeType,
-      image: planPreview?.url || "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80",
+      image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80",
       features: form.features.split("،").flatMap((part) => part.split(",")).map((part) => part.trim()).filter(Boolean),
       growth: score > 84 ? 16 : 12,
       liquidity: score,
