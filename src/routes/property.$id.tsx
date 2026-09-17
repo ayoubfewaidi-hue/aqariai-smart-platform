@@ -14,18 +14,29 @@ import {
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { GlassCard, GoldButton, SiteFooter, SiteHeader, Stat } from "@/components/ui-kit";
-import { FEATURED_PLOTS, PROPERTIES, analyze, fmt } from "@/lib/data";
+import {
+  DEFAULT_REGULATORY_DATA,
+  FEATURED_PLOTS,
+  PROPERTIES,
+  SELLER_DRAFT_STORAGE_KEY,
+  analyze,
+  fmt,
+  type Property,
+  type RegulatoryData,
+  type SellerDraftProperty,
+} from "@/lib/data";
 
 export const Route = createFileRoute("/property/$id")({
   loader: ({ params }) => {
     const plot = FEATURED_PLOTS.find((item) => item.id === params.id);
     const property = PROPERTIES.find((item) => item.id === params.id);
-    if (!plot && !property) throw notFound();
-    return { plot, property };
+    const isSellerDraft = params.id === "seller-draft";
+    if (!plot && !property && !isSellerDraft) throw notFound();
+    return { plot, property, isSellerDraft };
   },
   head: ({ loaderData }) => {
     const plot = loaderData?.plot;
@@ -61,9 +72,23 @@ export const Route = createFileRoute("/property/$id")({
 });
 
 function PropertyDetail() {
-  const { plot, property } = Route.useLoaderData();
+  const { plot, property, isSellerDraft } = Route.useLoaderData();
+  const [draft, setDraft] = useState<SellerDraftProperty | null>(null);
+
+  useEffect(() => {
+    if (!isSellerDraft) return;
+    try {
+      const raw = localStorage.getItem(SELLER_DRAFT_STORAGE_KEY);
+      setDraft(raw ? (JSON.parse(raw) as SellerDraftProperty) : null);
+    } catch {
+      setDraft(null);
+    }
+  }, [isSellerDraft]);
+
   if (plot) return <FeaturedPlotDetail plot={plot} />;
   if (property) return <LegacyPropertyDetail property={property} />;
+  if (isSellerDraft && draft) return <LegacyPropertyDetail property={draft} regulatory={draft.regulatory} score={draft.score} />;
+  if (isSellerDraft) return <DraftEmpty />;
   return null;
 }
 
@@ -293,10 +318,19 @@ function SourceBadge({ label, icon }: { label: string; icon: ReactNode }) {
   );
 }
 
-function LegacyPropertyDetail({ property: p }: { property: (typeof PROPERTIES)[number] }) {
+function LegacyPropertyDetail({
+  property: p,
+  regulatory,
+  score,
+}: {
+  property: Property;
+  regulatory?: RegulatoryData;
+  score?: number;
+}) {
   const a = analyze(p);
   const [booked, setBooked] = useState(false);
   const similar = PROPERTIES.filter((x) => x.id !== p.id).slice(0, 3);
+  const regulatoryRows = regulatoryToRows(regulatory);
 
   return (
     <div className="min-h-screen">
@@ -321,6 +355,7 @@ function LegacyPropertyDetail({ property: p }: { property: (typeof PROPERTIES)[n
           <p className="text-sm leading-relaxed text-muted-foreground">{p.summary}</p>
         </GlassCard>
         <section className="grid gap-3 sm:grid-cols-3">
+          {score ? <Stat label="Smart Score" value={`${score}/100`} hint="محسوب من بيانات المخطط" /> : null}
           <Stat label="سعر المتر المطلوب" value={`${fmt(p.pricePerM)} د.أ`} />
           <Stat label="سعر المتر العادل" value={`${fmt(a.fairPricePerM)} د.أ`} hint={a.verdict} />
           <Stat label="القيمة العادلة" value={`${fmt(a.fairTotal)} د.أ`} />
@@ -328,6 +363,20 @@ function LegacyPropertyDetail({ property: p }: { property: (typeof PROPERTIES)[n
           <Stat label="مستوى المخاطرة" value={a.risk} hint={`سيولة ${p.liquidity}/100`} />
           <Stat label="المدة المتوقعة للبيع" value={a.timeToSell} />
         </section>
+        {regulatory ? (
+          <GlassCard className="fade-up space-y-4">
+            <SourceBadge label="أمانة عمان الكبرى" icon={<Layers3 className="size-3.5" />} />
+            <h2 className="text-xl font-black">بيانات المخطط التنظيمي المنقولة</h2>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {regulatoryRows.map((item) => (
+                <div key={item.label} className="rounded-xl border border-border bg-background/30 px-3 py-2">
+                  <p className="text-[11px] text-muted-foreground">{item.label}</p>
+                  <p className="text-sm font-bold">{item.value}</p>
+                </div>
+              ))}
+            </div>
+          </GlassCard>
+        ) : null}
         <GlassCard className="fade-up space-y-3">
           <h2 className="text-lg font-bold">الخطوة التالية</h2>
           <div className="flex flex-wrap gap-2">
@@ -363,6 +412,39 @@ function LegacyPropertyDetail({ property: p }: { property: (typeof PROPERTIES)[n
             ))}
           </div>
         </section>
+      </main>
+      <SiteFooter />
+    </div>
+  );
+}
+
+function regulatoryToRows(regulatory: RegulatoryData = DEFAULT_REGULATORY_DATA) {
+  return [
+    { label: "نوع التنظيم", value: regulatory.type },
+    { label: "نسبة البناء", value: regulatory.buildingRatio },
+    { label: "معامل الاستغلال (FAR)", value: regulatory.far },
+    { label: "عدد الأدوار المسموحة", value: regulatory.floors },
+    { label: "الارتفاع الأقصى", value: regulatory.height },
+    { label: "الارتداد الأمامي", value: regulatory.frontSetback },
+    { label: "الارتداد الجانبي", value: regulatory.sideSetback },
+    { label: "الارتداد الخلفي", value: regulatory.rearSetback },
+    { label: "الحد الأدنى للفرز", value: regulatory.minSubdivision },
+    { label: "الحد الأدنى للمسطح الأخضر", value: regulatory.minGreenSpace },
+  ];
+}
+
+function DraftEmpty() {
+  return (
+    <div className="min-h-screen">
+      <SiteHeader />
+      <main className="mx-auto max-w-3xl px-4 py-16">
+        <GlassCard strong className="text-center">
+          <h1 className="text-2xl font-black">لا توجد قطعة منشورة بعد</h1>
+          <p className="mt-2 text-sm text-muted-foreground">انشر عقارك من بوابة البائع ليتم نقل بيانات المخطط إلى صفحة التفاصيل.</p>
+          <Link to="/seller" className="mt-6 inline-flex rounded-xl bg-primary px-5 py-3 text-sm font-bold text-primary-foreground">
+            العودة لبوابة البائع
+          </Link>
+        </GlassCard>
       </main>
       <SiteFooter />
     </div>
