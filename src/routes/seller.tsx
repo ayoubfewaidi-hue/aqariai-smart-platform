@@ -725,6 +725,7 @@ function PdfPreview({ file, compact, className }: { file: PreviewFile; compact?:
       if (!canvas) return;
 
       try {
+        ensurePdfJsMapSupport();
         const pdfjs = await import("pdfjs-dist");
         pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
         const loadingTask = pdfjs.getDocument({ data: dataUrlToBytes(file.url) });
@@ -738,8 +739,7 @@ function PdfPreview({ file, compact, className }: { file: PreviewFile; compact?:
         canvas.height = Math.floor(viewport.height);
         await page.render({ canvas, canvasContext: context, viewport }).promise;
         await loadingTask.destroy();
-      } catch (error) {
-        console.error("PDF preview failed", error);
+      } catch {
         if (!cancelled) setFailed(true);
       }
     }
@@ -762,6 +762,23 @@ function PdfPreview({ file, compact, className }: { file: PreviewFile; compact?:
       )}
     </div>
   );
+}
+
+type MapWithComputed<K, V> = Map<K, V> & {
+  getOrInsertComputed?: (key: K, callback: (key: K) => V) => V;
+};
+
+function ensurePdfJsMapSupport() {
+  const proto = Map.prototype as MapWithComputed<unknown, unknown>;
+  if (proto.getOrInsertComputed) return;
+
+  Object.defineProperty(Map.prototype, "getOrInsertComputed", {
+    configurable: true,
+    value: function getOrInsertComputed<K, V>(this: Map<K, V>, key: K, callback: (key: K) => V) {
+      if (!this.has(key)) this.set(key, callback(key));
+      return this.get(key) as V;
+    },
+  });
 }
 
 function validateFiles(files: File[]) {
