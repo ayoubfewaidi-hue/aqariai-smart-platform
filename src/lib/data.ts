@@ -647,3 +647,103 @@ export function analyze(p: Property) {
     timeToSell: p.liquidity > 80 ? "‏4-6 أسابيع" : p.liquidity > 68 ? "‏2-3 أشهر" : "‏4-6 أشهر",
   };
 }
+
+/* ====================== المناطق: بحث، صفحة منطقة، بدائل قريبة ====================== */
+
+export type SearchArea = {
+  name: string;
+  city: string;
+  lat: number;
+  lng: number;
+  avgPricePerM: number;
+  demand: string;
+  demandStars: number;
+  growth: number;
+  activity: string;
+  newProjects: string;
+  note: string;
+};
+
+export const SEARCH_AREAS: SearchArea[] = [
+  { name: "عبدون", city: "عمّان", lat: 31.9454, lng: 35.8965, avgPricePerM: 1450, demand: "طلب عالي جداً", demandStars: 5, growth: 9, activity: "نشطة جداً", newProjects: "فلل وشقق فاخرة", note: "أعلى مستوى خدمات ومكانة اجتماعية في غرب عمّان." },
+  { name: "دابوق", city: "عمّان", lat: 31.9899, lng: 35.8074, avgPricePerM: 520, demand: "طلب عالي", demandStars: 5, growth: 17, activity: "نشطة جداً", newProjects: "فلل فاخرة ومشاريع عائلية", note: "خصوصية عالية وخدمات قوية ومناسبة للعائلات." },
+  { name: "بدر الجديدة", city: "عمّان", lat: 31.9203, lng: 35.7566, avgPricePerM: 120, demand: "طلب عالي جداً", demandStars: 5, growth: 21, activity: "نشطة جداً", newProjects: "فلل ومشاريع منخفضة الكثافة", note: "سعر متر منافس مع طلب متزايد على الأراضي الكبيرة." },
+  { name: "الشميساني", city: "عمّان", lat: 31.9646, lng: 35.9018, avgPricePerM: 780, demand: "طلب عالي", demandStars: 4, growth: 8, activity: "نشطة", newProjects: "شقق ومكاتب صغيرة", note: "موقع مركزي وطلب مستقر على التأجير." },
+  { name: "الصويفية", city: "عمّان", lat: 31.9527, lng: 35.8735, avgPricePerM: 690, demand: "طلب متوسط", demandStars: 4, growth: 10, activity: "نشطة", newProjects: "شقق وخدمات تجارية", note: "خدمات تجارية وتعليمية قريبة ونمط حياة نشط." },
+  { name: "مرج الحمام", city: "عمّان", lat: 31.8875, lng: 35.8098, avgPricePerM: 260, demand: "طلب متزايد", demandStars: 4, growth: 15, activity: "نشطة", newProjects: "توسع سكني ومزارع قريبة", note: "توازن جيد بين السعر والخدمات والهدوء." },
+  { name: "ناعور", city: "عمّان", lat: 31.8709, lng: 35.8199, avgPricePerM: 180, demand: "طلب متزايد", demandStars: 3, growth: 16, activity: "متوسطة", newProjects: "مزارع وأراضٍ سكنية", note: "بوابة الأغوار ومساحات واسعة بكلفة دخول منخفضة." },
+  { name: "الجبيهة", city: "عمّان", lat: 32.0206, lng: 35.8721, avgPricePerM: 420, demand: "طلب عالي", demandStars: 4, growth: 11, activity: "نشطة", newProjects: "شقق سكنية وخدمات جامعية", note: "طلب دائم من طلاب الجامعة الأردنية والعائلات." },
+  { name: "خلدا", city: "عمّان", lat: 31.9755, lng: 35.8386, avgPricePerM: 640, demand: "طلب عالي", demandStars: 5, growth: 12, activity: "نشطة جداً", newProjects: "فلل وشقق عائلية", note: "من أقوى مناطق السكن العائلي في غرب عمّان." },
+  { name: "تلاع العلي", city: "عمّان", lat: 31.9884, lng: 35.8628, avgPricePerM: 560, demand: "طلب عالي", demandStars: 4, growth: 10, activity: "نشطة", newProjects: "شقق حديثة", note: "قرب خدمات ومواصلات مع أسعار أقل من عبدون." },
+  { name: "العبدلي", city: "عمّان", lat: 31.9601, lng: 35.9074, avgPricePerM: 850, demand: "طلب عالي", demandStars: 4, growth: 9, activity: "نشطة", newProjects: "أبراج ومشاريع مختلطة", note: "قلب المدينة الجديد بمشاريع مختلطة الاستخدام." },
+  { name: "المقابلين", city: "عمّان", lat: 31.8721, lng: 35.9273, avgPricePerM: 230, demand: "طلب متوسط", demandStars: 3, growth: 13, activity: "متوسطة", newProjects: "شقق اقتصادية", note: "أسعار مناسبة للشقق وطلب تأجيري مستقر." },
+  { name: "السويسة", city: "عمّان", lat: 31.9615, lng: 35.8529, avgPricePerM: 132, demand: "طلب عالي", demandStars: 4, growth: 18, activity: "نشطة", newProjects: "أراضٍ كبيرة للتطوير", note: "مساحات كبيرة بانحدار بسيط مناسبة للمشاريع." },
+  { name: "الحديب", city: "عمّان", lat: 31.9364, lng: 35.8898, avgPricePerM: 120, demand: "طلب متزايد", demandStars: 3, growth: 17, activity: "متوسطة", newProjects: "فلل ومنتجعات صغيرة", note: "موقع مرتفع بإطلالات وسعر أقل من متوسط المنطقة." },
+  { name: "أم الأسود", city: "عمّان", lat: 31.9042, lng: 35.7811, avgPricePerM: 118, demand: "طلب متزايد", demandStars: 3, growth: 16, activity: "متوسطة", newProjects: "أراضٍ زراعية وسكنية", note: "أسعار دخول منخفضة مع نمو عمراني واضح." },
+  { name: "البصّة", city: "عمّان", lat: 31.8968, lng: 35.7669, avgPricePerM: 105, demand: "طلب متوسط", demandStars: 3, growth: 14, activity: "متوسطة", newProjects: "قطع صغيرة للسكن", note: "قطع صغيرة بكلفة منخفضة مناسبة لأول استثمار." },
+  { name: "ماحص", city: "عمّان", lat: 31.9276, lng: 35.7295, avgPricePerM: 140, demand: "طلب متزايد", demandStars: 3, growth: 15, activity: "متوسطة", newProjects: "مزارع ومنتجعات", note: "طبيعة مفتوحة مناسبة للمزارع السياحية." },
+];
+
+export const NEARBY_AREAS: Record<string, string[]> = {
+  "ناعور": ["ماحص", "البصّة", "أم الأسود"],
+  "عبدون": ["دابوق", "خلدا", "الصويفية"],
+  "بدر الجديدة": ["السويسة", "الحديب", "أم الأسود"],
+  "دابوق": ["خلدا", "تلاع العلي", "بدر الجديدة"],
+  "خلدا": ["دابوق", "تلاع العلي", "الصويفية"],
+  "الشميساني": ["العبدلي", "الصويفية", "تلاع العلي"],
+  "الصويفية": ["عبدون", "خلدا", "الشميساني"],
+  "مرج الحمام": ["ناعور", "بدر الجديدة", "خلدا"],
+  "الجبيهة": ["تلاع العلي", "خلدا", "العبدلي"],
+  "تلاع العلي": ["خلدا", "الجبيهة", "الصويفية"],
+  "العبدلي": ["الشميساني", "الصويفية", "تلاع العلي"],
+  "المقابلين": ["ناعور", "البصّة", "مرج الحمام"],
+};
+
+export function findSearchAreas(query: string, limit = 6) {
+  const q = query.trim();
+  if (q.length < 2) return [];
+  return SEARCH_AREAS.filter((a) => a.name.includes(q) || a.city.includes(q)).slice(0, limit);
+}
+
+export function getSearchArea(name: string) {
+  const decoded = name.trim();
+  return SEARCH_AREAS.find((a) => a.name === decoded) || SEARCH_AREAS.find((a) => a.name.includes(decoded));
+}
+
+export function propertiesInArea(name: string, extra: Property[] = []) {
+  return [...extra, ...PROPERTIES].filter((p) => p.village.includes(name) || name.includes(p.village));
+}
+
+export function plotsInArea(name: string) {
+  return FEATURED_PLOTS.filter((p) => p.name.includes(name) || name.includes(p.name));
+}
+
+export function areaListingCount(name: string) {
+  return propertiesInArea(name).length + plotsInArea(name).length;
+}
+
+export function areaMatchPercent(name: string, profile: BuyerProfile) {
+  const area = getSearchArea(name);
+  if (!area) return 62;
+  const budgetFit = Math.max(0, 100 - Math.round(Math.max(0, area.avgPricePerM * 1000 - profile.budget) / 9000));
+  const goalScore =
+    profile.goal === "استثمار" ? 62 + area.growth * 1.6 : profile.goal === "تطوير" ? 58 + area.growth * 1.4 : 52 + area.demandStars * 9;
+  return Math.max(58, Math.min(98, Math.round(goalScore * 0.6 + budgetFit * 0.32 + area.demandStars * 2)));
+}
+
+export function nearbyAlternatives(name: string, profile: BuyerProfile) {
+  const fallback = NEARBY_AREAS[name] ?? ["دابوق", "بدر الجديدة", "مرج الحمام"];
+  return fallback
+    .map((n) => {
+      const area = getSearchArea(n);
+      return {
+        name: n,
+        city: area?.city ?? "عمّان",
+        match: areaMatchPercent(n, profile),
+        avgPricePerM: area?.avgPricePerM ?? 0,
+        count: areaListingCount(n),
+        why: area?.note ?? "منطقة مجاورة بخصائص مشابهة.",
+      };
+    })
+    .slice(0, 3);
+}

@@ -617,6 +617,8 @@ function SellerPortal() {
                   value={form.pricePerM}
                   onChange={(e) => setText("pricePerM")(e.target.value)}
                   placeholder="120"
+                  onFocus={(e) => (e.currentTarget.placeholder = "")}
+                  onBlur={(e) => (e.currentTarget.placeholder = "120")}
                   inputMode="decimal"
                   className="mt-2 w-full rounded-xl border border-input bg-background/40 px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary/70 focus:ring-2 focus:ring-primary/25"
                 />
@@ -627,6 +629,8 @@ function SellerPortal() {
                   value={form.price}
                   onChange={(e) => setText("price")(e.target.value)}
                   placeholder="1,152,000"
+                  onFocus={(e) => (e.currentTarget.placeholder = "")}
+                  onBlur={(e) => (e.currentTarget.placeholder = "1,152,000")}
                   inputMode="decimal"
                   className="mt-2 w-full rounded-xl border border-input bg-background/40 px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary/70 focus:ring-2 focus:ring-primary/25"
                 />
