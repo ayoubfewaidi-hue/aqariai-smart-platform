@@ -106,6 +106,200 @@ export const PROPERTIES: Property[] = [
   },
 ];
 
+export type FeaturedPlot = {
+  id: string;
+  name: string;
+  plot: string;
+  area: number;
+  areaText: string;
+  slope: string;
+  score: number;
+  cardScenarios: string[];
+  coordinates: string;
+  pricePerM: number;
+  marketAverage: number;
+  total: number;
+  zoning: string;
+  subScores: { label: string; value: number }[];
+  regulatory: { label: string; value: string }[];
+  investmentScenarios: {
+    name: string;
+    stats: { label: string; value: string }[];
+  }[];
+  recommendation: string;
+  strengths: string[];
+  cautions: string[];
+  similar: { name: string; area: string; pricePerM: string; total: string; score: number }[];
+};
+
+const DEFAULT_SUB_SCORES = [
+  { label: "الموقع والإمكانية الجغرافية", value: 92 },
+  { label: "مؤشرات التطوير العمراني", value: 85 },
+  { label: "الجدوى الاستثمارية", value: 84 },
+  { label: "النمو العمراني المتوقع", value: 92 },
+  { label: "قرب الخدمات والمرافق", value: 78 },
+];
+
+const DEFAULT_REGULATORY = [
+  { label: "نوع التنظيم", value: "سكن أخضر - أحكام خاصة" },
+  { label: "نسبة البناء", value: "40%" },
+  { label: "معامل الاستغلال (FAR)", value: "80%" },
+  { label: "عدد الأدوار المسموحة", value: "2" },
+  { label: "الارتفاع الأقصى", value: "9 م" },
+  { label: "الارتداد الأمامي", value: "5 م" },
+  { label: "الارتداد الجانبي", value: "3 م" },
+  { label: "الارتداد الخلفي", value: "4 م" },
+  { label: "الحد الأدنى للفرز", value: "1,200 م²" },
+  { label: "الحد الأدنى للمسطح الأخضر", value: "35%" },
+];
+
+const DEFAULT_INVESTMENT_SCENARIOS = [
+  {
+    name: "فيلا عائلية",
+    stats: [
+      { label: "مساحة البناء المتوقعة", value: "340 م²" },
+      { label: "تكلفة الإنشاء", value: "119,000 JOD" },
+      { label: "الإيرادات السنوية", value: "32,640 JOD" },
+      { label: "التكلفة الإجمالية", value: "221,000 JOD" },
+      { label: "العائد على الاستثمار", value: "14.8%" },
+      { label: "الجدول الزمني", value: "18-24 شهراً" },
+    ],
+  },
+  {
+    name: "مشروع استثماري",
+    stats: [
+      { label: "مساحة البناء المتوقعة", value: "760 م²" },
+      { label: "تكلفة الإنشاء", value: "266,000 JOD" },
+      { label: "الإيرادات السنوية", value: "48,000 JOD" },
+      { label: "التكلفة الإجمالية", value: "381,000 JOD" },
+      { label: "العائد على الاستثمار", value: "12.6%" },
+      { label: "الجدول الزمني", value: "24-30 شهراً" },
+    ],
+  },
+  {
+    name: "منتجع سياحي",
+    stats: [
+      { label: "مساحة البناء المتوقعة", value: "620 م²" },
+      { label: "تكلفة الإنشاء", value: "248,000 JOD" },
+      { label: "الإيرادات السنوية", value: "54,400 JOD" },
+      { label: "التكلفة الإجمالية", value: "396,000 JOD" },
+      { label: "العائد على الاستثمار", value: "13.7%" },
+      { label: "الجدول الزمني", value: "20-28 شهراً" },
+    ],
+  },
+];
+
+export const FEATURED_PLOTS: FeaturedPlot[] = [
+  {
+    id: "101",
+    name: "الحديب",
+    plot: "101",
+    area: 3105.6,
+    areaText: "3,105.6 م²",
+    slope: "انحدار 24م",
+    score: 86,
+    cardScenarios: ["فيلا سكنية", "مشروع تجاري", "منتجع سياحي"],
+    coordinates: "31.9364, 35.8898",
+    pricePerM: 120,
+    marketAverage: 140,
+    total: 372672,
+    zoning: "سكن أخضر - أحكام خاصة",
+    subScores: DEFAULT_SUB_SCORES,
+    regulatory: DEFAULT_REGULATORY,
+    investmentScenarios: DEFAULT_INVESTMENT_SCENARIOS,
+    recommendation:
+      "تحصل قطعة الحديب على تقييم قوي بفضل موقعها المرتفع ومساحتها القابلة للتطوير، مع سعر أقل من متوسط المنطقة بنسبة واضحة. أفضل استخدام مبدئي هو فيلا عائلية عالية الخصوصية أو مشروع ضيافة صغير بعد التحقق الميداني من الخدمات.",
+    strengths: ["موقع استراتيجي متميز 92/100", "جدوى استثمارية عالية 84/100", "مؤشرات تطوير قوية 85/100"],
+    cautions: ["يُنصح بالتحقق الميداني من شبكات البنية التحتية"],
+    similar: [
+      { name: "السويسة", area: "9,600 م²", pricePerM: "132 JOD", total: "1,267,200 JOD", score: 90 },
+      { name: "أم الأسود", area: "8,600 م²", pricePerM: "118 JOD", total: "1,014,800 JOD", score: 85 },
+      { name: "البصّة", area: "1,288 م²", pricePerM: "105 JOD", total: "135,240 JOD", score: 78 },
+    ],
+  },
+  {
+    id: "392",
+    name: "السويسة",
+    plot: "392",
+    area: 9600,
+    areaText: "9,600 م²",
+    slope: "انحدار 4م",
+    score: 90,
+    cardScenarios: ["مجمع سكني", "مشروع استثماري", "فندق"],
+    coordinates: "31.9615, 35.8529",
+    pricePerM: 132,
+    marketAverage: 150,
+    total: 1267200,
+    zoning: "سكن أخضر - أحكام خاصة",
+    subScores: DEFAULT_SUB_SCORES.map((s) => ({ ...s, value: Math.min(96, s.value + 3) })),
+    regulatory: DEFAULT_REGULATORY,
+    investmentScenarios: DEFAULT_INVESTMENT_SCENARIOS,
+    recommendation:
+      "السويسة هي أعلى القطع تقييماً في المجموعة بسبب المساحة الكبيرة والانحدار المحدود، ما يرفع مرونة التخطيط لمجمع سكني أو مشروع استثماري متوسط الحجم.",
+    strengths: ["مساحة تطوير كبيرة 94/100", "انحدار منخفض يدعم كلفة إنشائية أفضل", "جدوى استثمارية عالية 87/100"],
+    cautions: ["يفضل تدقيق حدود التنظيم قبل اعتماد تصميم متعدد الوحدات"],
+    similar: [
+      { name: "الحديب", area: "3,105.6 م²", pricePerM: "120 JOD", total: "372,672 JOD", score: 86 },
+      { name: "أم الأسود", area: "8,600 م²", pricePerM: "118 JOD", total: "1,014,800 JOD", score: 85 },
+      { name: "البصّة", area: "1,288 م²", pricePerM: "105 JOD", total: "135,240 JOD", score: 78 },
+    ],
+  },
+  {
+    id: "166",
+    name: "أم الأسود",
+    plot: "166",
+    area: 8600,
+    areaText: "8,600 م²",
+    slope: "انحدار 11م",
+    score: 85,
+    cardScenarios: ["فيلا عائلية", "مشروع استثماري", "مزرعة سياحية"],
+    coordinates: "31.9148, 35.8347",
+    pricePerM: 118,
+    marketAverage: 136,
+    total: 1014800,
+    zoning: "سكن أخضر - أحكام خاصة",
+    subScores: DEFAULT_SUB_SCORES,
+    regulatory: DEFAULT_REGULATORY,
+    investmentScenarios: DEFAULT_INVESTMENT_SCENARIOS,
+    recommendation:
+      "أم الأسود مناسبة للمستثمر الذي يوازن بين المساحة والسعر، وتظهر مؤشرات جيدة لمشروع منخفض الكثافة مع قابلية تحسين القيمة عبر تصميم يستفيد من طبيعة الأرض.",
+    strengths: ["مساحة كبيرة قابلة للتقسيم", "سعر متر منافس", "قرب مقبول من الخدمات الرئيسية"],
+    cautions: ["تحتاج مراجعة تفصيلية للانحدار قبل تقدير كلف التسوية"],
+    similar: [
+      { name: "السويسة", area: "9,600 م²", pricePerM: "132 JOD", total: "1,267,200 JOD", score: 90 },
+      { name: "الحديب", area: "3,105.6 م²", pricePerM: "120 JOD", total: "372,672 JOD", score: 86 },
+      { name: "البصّة", area: "1,288 م²", pricePerM: "105 JOD", total: "135,240 JOD", score: 78 },
+    ],
+  },
+  {
+    id: "528",
+    name: "البصّة",
+    plot: "528",
+    area: 1288,
+    areaText: "1,288 م²",
+    slope: "انحدار 8م",
+    score: 78,
+    cardScenarios: ["فيلا عائلية", "شاليه خاص", "استثمار قصير"],
+    coordinates: "31.8896, 35.8714",
+    pricePerM: 105,
+    marketAverage: 122,
+    total: 135240,
+    zoning: "سكن أخضر - أحكام خاصة",
+    subScores: DEFAULT_SUB_SCORES.map((s) => ({ ...s, value: Math.max(70, s.value - 7) })),
+    regulatory: DEFAULT_REGULATORY,
+    investmentScenarios: DEFAULT_INVESTMENT_SCENARIOS,
+    recommendation:
+      "البصّة خيار أصغر وأكثر مرونة للدخول الاستثماري، وتناسب بناء فيلا أو شاليه خاص مع عائد جيد إذا تم ضبط كلفة الإنشاء ومراجعة توفر الخدمات.",
+    strengths: ["سعر إجمالي منخفض نسبياً", "مناسبة لبناء خاص سريع", "فرصة تحسين بالقيمة بعد التطوير"],
+    cautions: ["درجة القرب من الخدمات أقل من القطع الأكبر ويجب التحقق منها ميدانياً"],
+    similar: [
+      { name: "الحديب", area: "3,105.6 م²", pricePerM: "120 JOD", total: "372,672 JOD", score: 86 },
+      { name: "أم الأسود", area: "8,600 م²", pricePerM: "118 JOD", total: "1,014,800 JOD", score: 85 },
+      { name: "السويسة", area: "9,600 م²", pricePerM: "132 JOD", total: "1,267,200 JOD", score: 90 },
+    ],
+  },
+];
+
 export type BuyerProfile = {
   budget: number;
   areas: string[];

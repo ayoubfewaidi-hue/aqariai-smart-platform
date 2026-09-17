@@ -1,5 +1,13 @@
 {
   "version": "7",
   "dialect": "postgresql",
-  "entries": []
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1789653572015,
+      "tag": "0000_seller_document_upload_policy",
+      "breakpoints": true
+    }
+  ]
 }

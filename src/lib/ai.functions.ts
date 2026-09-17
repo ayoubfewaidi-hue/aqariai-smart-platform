@@ -15,22 +15,27 @@ export type PlanData = {
 };
 
 const ExtractInput = z.object({
-  imageDataUrl: z.string().min(30),
+  fileDataUrl: z.string().min(30),
+  fileName: z.string().min(1),
+  mimeType: z.string().min(1),
 });
 
 export const extractPlanData = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => ExtractInput.parse(input))
   .handler(async ({ data }): Promise<PlanData> => {
+    const isPdf = data.mimeType === "application/pdf" || data.fileName.toLowerCase().endsWith(".pdf");
     const raw = await askAI({
       effort: "low",
       instructions:
-        "أنت خبير في قراءة مخططات الأراضي الأردنية (مخططات الأراضي والمساحة). استخرج البيانات المكتوبة على المخطط بدقة. أعِد JSON فقط دون أي نص إضافي بالمفاتيح: area, plot, basin, village, coordinates, zoning, notes, confidence. اترك القيمة نصاً فارغاً إذا لم تكن ظاهرة. confidence رقم من 0 إلى 100. التنظيم (zoning) استنتجه من المخطط أو من التنظيم المعتاد للمنطقة واذكر ذلك في notes.",
+        "أنت خبير في قراءة وثائق الأراضي الأردنية، خصوصاً وثائق تطبيق سند والمخططات التنظيمية وسجلات دائرة الأراضي. استخرج البيانات المكتوبة بدقة. أعِد JSON فقط دون أي نص إضافي بالمفاتيح: area, plot, basin, village, coordinates, zoning, notes, confidence. اترك القيمة نصاً فارغاً إذا لم تكن ظاهرة. confidence رقم من 0 إلى 100. التنظيم (zoning) استنتجه من الوثيقة أو من التنظيم المعتاد للمنطقة واذكر ذلك في notes.",
       parts: [
         {
           type: "input_text",
-          text: "استخرج بيانات هذه القطعة من صورة المخطط: المساحة، رقم القطعة، الحوض، القرية، الإحداثيات، التنظيم.",
+          text: "استخرج بيانات هذه القطعة من الملف المرفق: المساحة، رقم القطعة، الحوض، القرية، الإحداثيات، التنظيم. الملف قد يكون وثيقة سند أردنية أو مخططاً تنظيمياً أو سجلاً.",
         },
-        { type: "input_image", image_url: data.imageDataUrl },
+        isPdf
+          ? { type: "input_file", filename: data.fileName, file_data: data.fileDataUrl }
+          : { type: "input_image", image_url: data.fileDataUrl },
       ],
     });
 
