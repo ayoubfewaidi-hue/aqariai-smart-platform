@@ -937,7 +937,7 @@ function computeNeighbors(area: SearchArea) {
     .map((x) => x.name);
 }
 
-/** جوار ذكي: علاقات صريحة للمناطق الأساسية + جوار محسوب جغرافياً لباقي المناطق (5 لكل منطقة). */
+/** جوار جغرافي صريح لكل منطقة (نفس المحافظة أو التجمع الأقرب) + جوار محسوب بالمسافة كاحتياط لأي منطقة جديدة. */
 export const NEARBY_AREAS: Record<string, string[]> = SEARCH_AREAS.reduce<Record<string, string[]>>(
   (acc, area) => {
     acc[area.name] = EXPLICIT_NEARBY[area.name] ?? computeNeighbors(area);
