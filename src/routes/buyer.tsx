@@ -88,7 +88,45 @@ function BuyerPortal() {
     [input, messages, query],
   );
 
-  const recommendedAreas = useMemo(() => recommendAreas(profile, conversationText), [conversationText, profile]);
+  const recommendedAreas = useMemo<AreaCard[]>(() => {
+    const trimmed = query.trim();
+    if (trimmed.length >= 2) {
+      const hit = findSearchAreas(trimmed, 1)[0];
+      if (hit) {
+        const main: AreaCard = {
+          name: hit.name,
+          demand: hit.demand,
+          activity: hit.activity,
+          avgPricePerM: hit.avgPricePerM,
+          newProjects: hit.newProjects,
+          match: areaMatchPercent(hit.name, profile),
+          reason: `نتائج البحث: ${hit.note}`,
+        };
+        const alts: AreaCard[] = nearbyAlternatives(hit.name, profile).map((alt) => {
+          const area = getSearchArea(alt.name);
+          return {
+            name: alt.name,
+            demand: area?.demand ?? "طلب متوسط",
+            activity: area?.activity ?? "متوسطة",
+            avgPricePerM: alt.avgPricePerM,
+            newProjects: area?.newProjects ?? "مشاريع متنوعة",
+            match: alt.match,
+            reason: `منطقة مجاورة: ${alt.why}`,
+          };
+        });
+        return [main, ...alts].slice(0, 4);
+      }
+    }
+    return recommendAreas(profile, conversationText).map((area) => ({
+      name: area.name,
+      demand: area.demand,
+      activity: area.activity,
+      avgPricePerM: area.avgPricePerM,
+      newProjects: area.newProjects,
+      match: area.match,
+      reason: area.reason,
+    }));
+  }, [conversationText, profile, query]);
   const allProperties = useMemo<Property[]>(
     () => (sellerDraft ? [sellerDraft, ...PROPERTIES] : PROPERTIES),
     [sellerDraft],
