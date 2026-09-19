@@ -58,6 +58,16 @@ const GOALS: BuyerProfile["goal"][] = ["سكن", "استثمار", "تطوير"]
 
 type Msg = { role: "user" | "assistant"; text: string };
 
+type AreaCard = {
+  name: string;
+  demand: string;
+  activity: string;
+  avgPricePerM: number;
+  newProjects: string;
+  match: number;
+  reason: string;
+};
+
 function BuyerPortal() {
   const advisor = useServerFn(askAdvisor);
   const [profile, setProfile] = useState<BuyerProfile>(DEFAULT_BUYER);
