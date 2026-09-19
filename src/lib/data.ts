@@ -704,7 +704,7 @@ export function normalizeArabic(text: string): string {
     .replace(/[أإآٱ]/g, "ا")
     .replace(/ة/g, "ه")
     .replace(/ى/g, "ي")
-    .replace(/[ً-ْٰ]/g, "")
+    .replace(/[\u064B-\u0652\u0670]/g, "")
     .split(/\s+/)
     .map((word) => (word.startsWith("ال") && word.length > 3 ? word.slice(2) : word))
     .join(" ")
