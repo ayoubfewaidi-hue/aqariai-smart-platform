@@ -699,23 +699,44 @@ export const NEARBY_AREAS: Record<string, string[]> = {
   "المقابلين": ["ناعور", "البصّة", "مرج الحمام"],
 };
 
+export function normalizeArabic(text: string): string {
+  return text
+    .replace(/[أإآٱ]/g, "ا")
+    .replace(/ة/g, "ه")
+    .replace(/ى/g, "ي")
+    .replace(/[ً-ْٰ]/g, "")
+    .split(/\s+/)
+    .map((word) => (word.startsWith("ال") && word.length > 3 ? word.slice(2) : word))
+    .join(" ")
+    .trim()
+    .toLowerCase();
+}
+
 export function findSearchAreas(query: string, limit = 6) {
-  const q = query.trim();
+  const q = normalizeArabic(query);
   if (q.length < 2) return [];
-  return SEARCH_AREAS.filter((a) => a.name.includes(q) || a.city.includes(q)).slice(0, limit);
+  return SEARCH_AREAS.filter(
+    (a) => normalizeArabic(a.name).includes(q) || normalizeArabic(a.city).includes(q),
+  ).slice(0, limit);
 }
 
 export function getSearchArea(name: string) {
-  const decoded = name.trim();
-  return SEARCH_AREAS.find((a) => a.name === decoded) || SEARCH_AREAS.find((a) => a.name.includes(decoded));
+  const target = normalizeArabic(name);
+  return SEARCH_AREAS.find((a) => a.name === name.trim()) || SEARCH_AREAS.find((a) => normalizeArabic(a.name).includes(target));
 }
 
 export function propertiesInArea(name: string, extra: Property[] = []) {
-  return [...extra, ...PROPERTIES].filter((p) => p.village.includes(name) || name.includes(p.village));
+  const target = normalizeArabic(name);
+  return [...extra, ...PROPERTIES].filter(
+    (p) => normalizeArabic(p.village).includes(target) || target.includes(normalizeArabic(p.village)),
+  );
 }
 
 export function plotsInArea(name: string) {
-  return FEATURED_PLOTS.filter((p) => p.name.includes(name) || name.includes(p.name));
+  const target = normalizeArabic(name);
+  return FEATURED_PLOTS.filter(
+    (p) => normalizeArabic(p.name).includes(target) || target.includes(normalizeArabic(p.name)),
+  );
 }
 
 export function areaListingCount(name: string) {
