@@ -28,6 +28,7 @@ import {
   matchReasons,
   matchScore,
   nearbyAlternatives,
+  normalizeArabic,
   recommendAreas,
   smartPropertyScore,
   type BuyerProfile,
@@ -145,13 +146,17 @@ function BuyerPortal() {
   );
 
   const ranked = useMemo(() => {
-    const q = query.trim();
-    return allProperties.filter(
-      (p) =>
-        !q ||
-        `${p.title} ${p.village} ${p.city} ${p.type} ${p.zoning} ${p.basin}`.includes(q),
-    )
-      .map((p) => ({ p, score: matchScore(p, { ...profile, searches: [q] }) }))
+    const raw = query.trim();
+    const q = normalizeArabic(raw);
+    return allProperties
+      .filter(
+        (p) =>
+          !q ||
+          normalizeArabic(
+            `${p.title} ${p.village} ${p.city} ${p.type} ${p.zoning} ${p.basin}`,
+          ).includes(q),
+      )
+      .map((p) => ({ p, score: matchScore(p, { ...profile, searches: [raw] }) }))
       .sort((a, b) => b.score - a.score);
   }, [allProperties, profile, query]);
 
