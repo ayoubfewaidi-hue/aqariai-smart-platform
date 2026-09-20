@@ -189,6 +189,27 @@ export function SiteHeader() {
           >
             بائع
           </Link>
+          <Link
+            to="/pricing"
+            className="rounded-lg px-3 py-2 text-muted-foreground transition hover:bg-accent hover:text-foreground"
+            activeProps={{ className: "rounded-lg px-3 py-2 bg-primary/15 text-primary" }}
+          >
+            الأسعار
+          </Link>
+          <Link
+            to="/about"
+            className="rounded-lg px-3 py-2 text-muted-foreground transition hover:bg-accent hover:text-foreground"
+            activeProps={{ className: "rounded-lg px-3 py-2 bg-primary/15 text-primary" }}
+          >
+            من نحن
+          </Link>
+          <Link
+            to="/contact"
+            className="rounded-lg px-3 py-2 text-muted-foreground transition hover:bg-accent hover:text-foreground"
+            activeProps={{ className: "rounded-lg px-3 py-2 bg-primary/15 text-primary" }}
+          >
+            تواصل
+          </Link>
         </nav>
       </div>
     </header>
