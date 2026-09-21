@@ -1,7 +1,8 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowUpLeft, BadgeCheck, Heart, MapPin, Mountain, Ruler, Search, SearchX, Send, Share2, Sparkles, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { ArrowUpLeft, BadgeCheck, Heart, MapPin, Mic, MicOff, Mountain, Ruler, Search, SearchX, Send, Share2, Sparkles, Volume2, VolumeX, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+
 import { toast } from "sonner";
 
 import {
@@ -15,6 +16,8 @@ import {
   Skeleton,
 } from "@/components/ui-kit";
 import { askAdvisor } from "@/lib/ai.functions";
+import { VoicePlayer, getRecognition } from "@/lib/speech";
+
 import {
   DEFAULT_BUYER,
   FEATURED_PLOTS,
@@ -84,6 +87,60 @@ function BuyerPortal() {
   const [chatError, setChatError] = useState<string | null>(null);
   const [sellerDraft, setSellerDraft] = useState<SellerDraftProperty | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const [voiceReply, setVoiceReply] = useState(true);
+  const recognitionRef = useRef<{ stop: () => void } | null>(null);
+  const playerRef = useRef<VoicePlayer | null>(null);
+
+  useEffect(() => () => {
+    recognitionRef.current?.stop();
+    playerRef.current?.stop();
+  }, []);
+
+  function stopSpeaking() {
+    playerRef.current?.stop();
+    setSpeaking(false);
+  }
+
+  async function speakReply(text: string) {
+    if (!voiceReply || !text) return;
+    playerRef.current ??= new VoicePlayer();
+    setSpeaking(true);
+    try {
+      await playerRef.current.speak(text);
+    } catch {
+      toast.error("تعذر تشغيل الرد الصوتي");
+    } finally {
+      setSpeaking(false);
+    }
+  }
+
+  function toggleListening() {
+    if (listening) {
+      recognitionRef.current?.stop();
+      return;
+    }
+    const recognition = getRecognition();
+    if (!recognition) {
+      toast.error("الإدخال الصوتي غير مدعوم في هذا المتصفح");
+      return;
+    }
+    stopSpeaking();
+    recognition.onstart = () => setListening(true);
+    recognition.onend = () => setListening(false);
+    recognition.onerror = () => {
+      setListening(false);
+      toast.error("تعذر تشغيل الإدخال الصوتي");
+    };
+    recognition.onresult = (event) => {
+      const transcript = event.results[0]?.[0]?.transcript?.trim();
+      if (transcript) void send(transcript);
+    };
+    recognitionRef.current = recognition;
+    recognition.start();
+  }
+
 
   useEffect(() => {
     try {
@@ -145,18 +202,19 @@ function BuyerPortal() {
 
   const ranked = useMemo(() => {
     const raw = query.trim();
-    const q = normalizeArabic(raw);
+    const tokens = normalizeArabic(raw).split(/\s+/).filter((t) => t.length >= 2);
     return allProperties
-      .filter(
-        (p) =>
-          !q ||
-          normalizeArabic(
-            `${p.title} ${p.village} ${p.city} ${p.type} ${p.zoning} ${p.basin}`,
-          ).includes(q),
-      )
+      .filter((p) => {
+        if (!tokens.length) return true;
+        const haystack = normalizeArabic(
+          `${p.title} ${p.village} ${p.city} ${p.type} ${p.zoning} ${p.basin} ${p.summary} ${p.features.join(" ")}`,
+        );
+        return tokens.some((t) => haystack.includes(t));
+      })
       .map((p) => ({ p, score: matchScore(p, { ...profile, searches: [raw] }) }))
       .sort((a, b) => b.score - a.score);
   }, [allProperties, profile, query]);
+
 
   const suggestions = useMemo(() => findSearchAreas(query), [query]);
   const searchedArea = useMemo(
@@ -179,10 +237,11 @@ function BuyerPortal() {
       areas: pr.areas.includes(a) ? pr.areas.filter((x) => x !== a) : [...pr.areas, a],
     }));
 
-  async function send() {
-    const text = input.trim();
+  async function send(spoken?: string) {
+    const text = (spoken ?? input).trim();
     if (!text || thinking) return;
     setInput("");
+
     setChatError(null);
     const history = messages.slice(-8);
     setMessages((m) => [...m, { role: "user", text }]);
@@ -224,6 +283,8 @@ function BuyerPortal() {
         parking: preferences.parking ?? current.parking,
       }));
       setMessages((m) => [...m, { role: "assistant", text: reply }]);
+      void speakReply(reply);
+
     } catch (e) {
       setChatError(e instanceof Error ? e.message : "تعذر الاتصال بالمستشار.");
     } finally {
@@ -297,14 +358,26 @@ function BuyerPortal() {
           </div>
 
           <div className="rounded-xl border border-border bg-background/25 p-4">
-            <p className="mb-3 text-xs text-muted-foreground">اذكر ميزانيتك والمنطقة ونوع العقار والمساحة والغرف والحديقة والشرفة والموقف بطريقتك.</p>
+            <p className="mb-3 text-xs text-muted-foreground">تحدث بالصوت أو اكتب: اذكر ميزانيتك والمنطقة ونوع العقار والمساحة والغرف والحديقة والشرفة والموقف.</p>
+            {listening ? <p className="mb-3 text-xs font-bold text-secondary">أستمع إليك الآن… تحدث بوضوح.</p> : null}
+            {speaking ? <p className="mb-3 text-xs font-bold text-primary">جاري الرد بالصوت…</p> : null}
+
             <div className="max-h-64 space-y-3 overflow-y-auto pe-1">
               {messages.map((m, i) => <div key={i} className={`max-w-[88%] rounded-xl px-3 py-2 text-sm ${m.role === "user" ? "ms-auto bg-primary/15" : "bg-background/40"}`}>{m.text}</div>)}
               {thinking ? <Skeleton className="h-12 w-2/3" /> : null}
             </div>
             {chatError ? <ErrorNote message={chatError} /> : null}
             <div className="mt-3 flex gap-2">
-              <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void send(); }} placeholder="مثال: أريد فيلا في دابوق بحديقة و4 غرف" className="flex-1 rounded-xl border border-input bg-background/40 px-4 py-3 text-sm outline-none focus:border-primary/70" />
+              <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void send(); }} placeholder="اضغط الميكروفون وتحدث، أو اكتب هنا" className="flex-1 rounded-xl border border-input bg-background/40 px-4 py-3 text-sm outline-none focus:border-primary/70" />
+              <GoldButton variant={listening ? "emerald" : "outline"} className="size-11 shrink-0 px-0" onClick={toggleListening}>
+                {listening ? <MicOff className="size-4" /> : <Mic className="size-4" />}
+                <span className="sr-only">{listening ? "إيقاف التحدث" : "تحدث مع المستشار"}</span>
+              </GoldButton>
+              <GoldButton variant="outline" className="size-11 shrink-0 px-0" onClick={() => { if (speaking) stopSpeaking(); setVoiceReply((v) => !v); }}>
+                {voiceReply ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
+                <span className="sr-only">{voiceReply ? "إيقاف الرد الصوتي" : "تشغيل الرد الصوتي"}</span>
+              </GoldButton>
+
               <GoldButton onClick={() => void send()} loading={thinking}><Send className="size-4" /> إرسال</GoldButton>
             </div>
           </div>

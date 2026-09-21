@@ -15,6 +15,7 @@ import { Route as BuyerRouteImport } from './routes/buyer'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as SellerRouteImport } from './routes/seller'
+import { Route as ApiTtsRouteImport } from './routes/api/tts'
 import { Route as AreaNameRouteImport } from './routes/area.$name'
 import { Route as PropertyIdRouteImport } from './routes/property.$id'
 
@@ -48,6 +49,11 @@ const SellerRoute = SellerRouteImport.update({
   path: '/seller',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiTtsRoute = ApiTtsRouteImport.update({
+  id: '/api/tts',
+  path: '/api/tts',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AreaNameRoute = AreaNameRouteImport.update({
   id: '/area/$name',
   path: '/area/$name',
@@ -66,6 +72,7 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/pricing': typeof PricingRoute
   '/seller': typeof SellerRoute
+  '/api/tts': typeof ApiTtsRoute
   '/area/$name': typeof AreaNameRoute
   '/property/$id': typeof PropertyIdRoute
 }
@@ -76,6 +83,7 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/pricing': typeof PricingRoute
   '/seller': typeof SellerRoute
+  '/api/tts': typeof ApiTtsRoute
   '/area/$name': typeof AreaNameRoute
   '/property/$id': typeof PropertyIdRoute
 }
@@ -87,6 +95,7 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/pricing': typeof PricingRoute
   '/seller': typeof SellerRoute
+  '/api/tts': typeof ApiTtsRoute
   '/area/$name': typeof AreaNameRoute
   '/property/$id': typeof PropertyIdRoute
 }
@@ -99,6 +108,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/pricing'
     | '/seller'
+    | '/api/tts'
     | '/area/$name'
     | '/property/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -109,6 +119,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/pricing'
     | '/seller'
+    | '/api/tts'
     | '/area/$name'
     | '/property/$id'
   id:
@@ -119,6 +130,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/pricing'
     | '/seller'
+    | '/api/tts'
     | '/area/$name'
     | '/property/$id'
   fileRoutesById: FileRoutesById
@@ -130,6 +142,7 @@ export interface RootRouteChildren {
   ContactRoute: typeof ContactRoute
   PricingRoute: typeof PricingRoute
   SellerRoute: typeof SellerRoute
+  ApiTtsRoute: typeof ApiTtsRoute
   AreaNameRoute: typeof AreaNameRoute
   PropertyIdRoute: typeof PropertyIdRoute
 }
@@ -178,6 +191,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SellerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/tts': {
+      id: '/api/tts'
+      path: '/api/tts'
+      fullPath: '/api/tts'
+      preLoaderRoute: typeof ApiTtsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/area/$name': {
       id: '/area/$name'
       path: '/area/$name'
@@ -202,6 +222,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   PricingRoute: PricingRoute,
   SellerRoute: SellerRoute,
+  ApiTtsRoute: ApiTtsRoute,
   AreaNameRoute: AreaNameRoute,
   PropertyIdRoute: PropertyIdRoute,
 }
