@@ -358,7 +358,10 @@ function BuyerPortal() {
           </div>
 
           <div className="rounded-xl border border-border bg-background/25 p-4">
-            <p className="mb-3 text-xs text-muted-foreground">اذكر ميزانيتك والمنطقة ونوع العقار والمساحة والغرف والحديقة والشرفة والموقف بطريقتك.</p>
+            <p className="mb-3 text-xs text-muted-foreground">تحدث بالصوت أو اكتب: اذكر ميزانيتك والمنطقة ونوع العقار والمساحة والغرف والحديقة والشرفة والموقف.</p>
+            {listening ? <p className="mb-3 text-xs font-bold text-secondary">أستمع إليك الآن… تحدث بوضوح.</p> : null}
+            {speaking ? <p className="mb-3 text-xs font-bold text-primary">جاري الرد بالصوت…</p> : null}
+
             <div className="max-h-64 space-y-3 overflow-y-auto pe-1">
               {messages.map((m, i) => <div key={i} className={`max-w-[88%] rounded-xl px-3 py-2 text-sm ${m.role === "user" ? "ms-auto bg-primary/15" : "bg-background/40"}`}>{m.text}</div>)}
               {thinking ? <Skeleton className="h-12 w-2/3" /> : null}
