@@ -93,10 +93,18 @@ function PropertyDetail() {
 }
 
 function FeaturedPlotDetail({ plot }: { plot: (typeof FEATURED_PLOTS)[number] }) {
-  const [activeScenario, setActiveScenario] = useState(plot.investmentScenarios[0]?.name ?? "فيلا عائلية");
+  const scenarios = useMemo(
+    () =>
+      plot.investmentScenarios.map((item, index) => ({
+        ...item,
+        name: plot.cardScenarios[index] ?? item.name,
+      })),
+    [plot.cardScenarios, plot.investmentScenarios],
+  );
+  const [activeScenario, setActiveScenario] = useState(scenarios[0]?.name ?? "فيلا عائلية");
   const active = useMemo(
-    () => plot.investmentScenarios.find((item) => item.name === activeScenario) ?? plot.investmentScenarios[0],
-    [activeScenario, plot.investmentScenarios],
+    () => scenarios.find((item) => item.name === activeScenario) ?? scenarios[0],
+    [activeScenario, scenarios],
   );
   const difference = Math.round(((plot.pricePerM - plot.marketAverage) / plot.marketAverage) * 100);
   const gaugeColor = plot.score > 80 ? "var(--emerald-light)" : plot.score >= 60 ? "var(--gold)" : "var(--destructive)";
