@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import {
   BadgeCheck,
@@ -149,6 +149,7 @@ const MAX_UPLOAD_SIZE = 15 * 1024 * 1024;
 const MAX_UPLOAD_FILES = 5;
 
 function SellerPortal() {
+  const navigate = useNavigate();
   const extract = useServerFn(extractPlanData);
   const marketing = useServerFn(generateMarketing);
 
@@ -540,13 +541,19 @@ function SellerPortal() {
                 <p className="text-xs text-muted-foreground">ملاحظة الذكاء: {extracted.notes}</p>
               ) : null}
               <div className="flex flex-wrap gap-2">
-                <GoldButton onClick={() => setConfirmed(true)}>
+                <GoldButton
+                  onClick={() => {
+                    setConfirmed(true);
+                    toast.success("تم تأكيد البيانات المستخرجة");
+                  }}
+                >
                   <CheckCircle2 className="size-4" /> نعم، صحيحة
                 </GoldButton>
                 <GoldButton
                   variant="outline"
                   onClick={() => {
                     setConfirmed(false);
+                    document.getElementById("property-data")?.scrollIntoView({ behavior: "smooth", block: "start" });
                     toast.info("عدّل الحقول في الخطوة الثانية بالأسفل");
                   }}
                 >
