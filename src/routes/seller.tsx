@@ -570,6 +570,8 @@ function SellerPortal() {
         </GlassCard>
 
         {/* 2. Data */}
+        <div id="property-data" className="scroll-mt-24" />
+
         <GlassCard className="fade-up space-y-4">
           <StepHead n={2} title="بيانات العقار (قابلة للتعديل)" icon={<FileText className="size-4" />} />
           <div className="grid gap-3 sm:grid-cols-3">
@@ -855,6 +857,7 @@ function SellerPortal() {
                 localStorage.setItem(SELLER_DRAFT_STORAGE_KEY, JSON.stringify(buildDraftProperty()));
                 setPublished(true);
                 toast.success("تم نشر العقار على القنوات المقترحة");
+                void navigate({ to: "/property/$id", params: { id: "seller-draft" } });
               }}
             >
               <Rocket className="size-4" /> انشر الآن
@@ -988,7 +991,7 @@ function SellerPortal() {
               🎉 عقارك منشور الآن ويظهر للمشترين المطابقين مع درجة مطابقة محسوبة.
               <button
                 type="button"
-                onClick={() => window.open("/property/seller-draft", "_blank", "noopener,noreferrer")}
+                onClick={() => void navigate({ to: "/property/$id", params: { id: "seller-draft" } })}
                 className="ms-3 rounded-full border border-secondary-foreground/30 px-3 py-1 text-xs transition hover:bg-secondary"
               >
                 افتح صفحة التفاصيل
