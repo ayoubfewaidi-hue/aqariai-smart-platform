@@ -166,14 +166,27 @@ const AdvisorInput = z.object({
   profile: z.string(),
 });
 
+export type AdvisorPreferences = {
+  budget: number | null;
+  areas: string[];
+  familySize: number | null;
+  goal: "سكن" | "استثمار" | "تطوير" | null;
+  propertyType: "أرض" | "فيلا" | "شقة" | "مشروع" | null;
+  minArea: number | null;
+  rooms: number | null;
+  garden: boolean | null;
+  balcony: boolean | null;
+  parking: boolean | null;
+};
+
 export const askAdvisor = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => AdvisorInput.parse(input))
-  .handler(async ({ data }): Promise<{ reply: string }> => {
+  .handler(async ({ data }): Promise<{ reply: string; preferences: AdvisorPreferences }> => {
     const transcript = data.history.map((m) => `${m.role === "user" ? "المشتري" : "المستشار"}: ${m.text}`).join("\n");
     const reply = await askAI({
       effort: "low",
       instructions:
-        "أنت مستشار عقاري أردني ذكي داخل منصة عقاري AI. أجب بالعربية بإيجاز (حتى 120 كلمة) ورشّح من العقارات المتاحة فقط، مع ذكر سبب الترشيح ونقطة المطابقة. لا تخترع عقارات غير موجودة. اقترح خطوة تالية واضحة مثل حجز معاينة. اكتب نصاً عادياً بدون أي تنسيق ماركداون ولا نجوم ولا رموز.",
+        "أنت مستشار عقاري أردني داخل منصة عقاري AI. أعِد JSON فقط بالمفتاح reply لإجابة عربية موجزة، والمفتاح preferences وفيه budget وareas وfamilySize وgoal وpropertyType وminArea وrooms وgarden وbalcony وparking. استخرج فقط ما ذكره المستخدم؛ استخدم null للأرقام والاختيارات والمنطقيات غير المذكورة و[] للمناطق غير المذكورة. goal أحد سكن أو استثمار أو تطوير، وpropertyType أحد أرض أو فيلا أو شقة أو مشروع. رشّح من العقارات المتاحة فقط ولا تخترع عقارات.",
       parts: [
         {
           type: "input_text",
@@ -181,6 +194,23 @@ export const askAdvisor = createServerFn({ method: "POST" })
         },
       ],
     });
-    const clean = reply.replace(/\*\*/g, "").replace(/^#+\s*/gm, "").trim();
-    return { reply: clean || "لم أتمكن من صياغة إجابة الآن، جرّب صياغة سؤالك بشكل مختلف." };
+    const parsed = parseJsonBlock<{ reply?: unknown; preferences?: Partial<AdvisorPreferences> }>(reply);
+    const preferences = parsed?.preferences ?? {};
+    const goals = ["سكن", "استثمار", "تطوير"];
+    const types = ["أرض", "فيلا", "شقة", "مشروع"];
+    return {
+      reply: String(parsed?.reply ?? reply).replace(/\*\*/g, "").replace(/^#+\s*/gm, "").trim() || "لم أتمكن من صياغة إجابة الآن.",
+      preferences: {
+        budget: typeof preferences.budget === "number" && preferences.budget > 0 ? preferences.budget : null,
+        areas: Array.isArray(preferences.areas) ? preferences.areas.filter((area): area is string => typeof area === "string") : [],
+        familySize: typeof preferences.familySize === "number" && preferences.familySize > 0 ? preferences.familySize : null,
+        goal: typeof preferences.goal === "string" && goals.includes(preferences.goal) ? preferences.goal as AdvisorPreferences["goal"] : null,
+        propertyType: typeof preferences.propertyType === "string" && types.includes(preferences.propertyType) ? preferences.propertyType as AdvisorPreferences["propertyType"] : null,
+        minArea: typeof preferences.minArea === "number" && preferences.minArea > 0 ? preferences.minArea : null,
+        rooms: typeof preferences.rooms === "number" && preferences.rooms > 0 ? preferences.rooms : null,
+        garden: typeof preferences.garden === "boolean" ? preferences.garden : null,
+        balcony: typeof preferences.balcony === "boolean" ? preferences.balcony : null,
+        parking: typeof preferences.parking === "boolean" ? preferences.parking : null,
+      },
+    };
   });

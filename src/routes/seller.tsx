@@ -9,6 +9,8 @@ import {
   Hash,
   Layers3,
   Megaphone,
+  Mic,
+  MicOff,
   Paperclip,
   Rocket,
   ScanLine,
@@ -34,7 +36,7 @@ import {
 } from "@/components/ui-kit";
 import { supabase } from "@/integrations/supabase/client";
 import { extractPlanData, generateMarketing, type MarketingPackage, type PlanData } from "@/lib/ai.functions";
-import { DEFAULT_REGULATORY_DATA, PUBLISHING_CHANNELS, SELLER_DRAFT_STORAGE_KEY, fmt, type Property } from "@/lib/data";
+import { DEFAULT_REGULATORY_DATA, SELLER_DRAFT_STORAGE_KEY, fmt, type Property } from "@/lib/data";
 
 export const Route = createFileRoute("/seller")({
   head: () => ({
@@ -95,10 +97,10 @@ const EMPTY_FORM: PropertyForm = {
   coordinates: "",
   zoning: "",
   price: "",
-  pricePerM: "120",
+  pricePerM: "",
   negotiable: false,
-  minPricePerM: "110",
-  maxPricePerM: "130",
+  minPricePerM: "",
+  maxPricePerM: "",
   zoningType: DEFAULT_REGULATORY_DATA.type,
   buildingRatio: DEFAULT_REGULATORY_DATA.buildingRatio,
   far: DEFAULT_REGULATORY_DATA.far,
@@ -136,6 +138,17 @@ type PreviewFile = {
   mimeType: string;
 };
 
+type SpeechRecognitionLike = {
+  lang: string;
+  interimResults: boolean;
+  onstart: (() => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+  onresult: ((event: { results: ArrayLike<{ 0?: { transcript?: string } }> }) => void) | null;
+  start: () => void;
+  stop: () => void;
+};
+
 const CATEGORIES = [
   "صورة المخطط",
   "ترخيص البناء",
@@ -160,7 +173,7 @@ function SellerPortal() {
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<PropertyForm>(EMPTY_FORM);
   const [priceMode, setPriceMode] = useState<PriceMode>("meter");
-  const [marketingBudget, setMarketingBudget] = useState("450");
+  const [listening, setListening] = useState(false);
 
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [category, setCategory] = useState<string>("صورة المخطط");
@@ -174,8 +187,28 @@ function SellerPortal() {
 
   const planInput = useRef<HTMLInputElement>(null);
   const filesInput = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   const setText = (k: TextFormKey) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
+
+  function toggleVoiceInput() {
+    if (listening) return recognitionRef.current?.stop();
+    const speechWindow = window as typeof window & { SpeechRecognition?: new () => SpeechRecognitionLike; webkitSpeechRecognition?: new () => SpeechRecognitionLike };
+    const SpeechRecognition = speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
+    if (!SpeechRecognition) return toast.error("الإملاء الصوتي غير مدعوم في هذا المتصفح");
+    const recognition = new SpeechRecognition();
+    recognition.lang = "ar-JO";
+    recognition.interimResults = false;
+    recognition.onstart = () => setListening(true);
+    recognition.onend = () => setListening(false);
+    recognition.onerror = () => { setListening(false); toast.error("تعذر تشغيل الإملاء الصوتي"); };
+    recognition.onresult = (event) => {
+      const transcript = event.results[0]?.[0]?.transcript?.trim();
+      if (transcript) setForm((current) => ({ ...current, features: [current.features, transcript].filter(Boolean).join("، ") }));
+    };
+    recognitionRef.current = recognition;
+    recognition.start();
+  }
 
   async function handlePlanFiles(fileList: FileList | File[]) {
     const files = validateFiles(Array.from(fileList));
@@ -292,18 +325,10 @@ function SellerPortal() {
   const meterPriceNum = Number(form.pricePerM.replace(/[^\d.]/g, "")) || 0;
   const calculatedTotal = Math.round(priceMode === "meter" ? areaNum * meterPriceNum : priceNum);
   const calculatedPricePerM = areaNum ? Math.round(priceMode === "total" ? priceNum / areaNum : meterPriceNum) : 0;
-  const budgetNum = Number(marketingBudget.replace(/[^\d.]/g, "")) || 0;
-  const weightedChannels = PUBLISHING_CHANNELS.filter((channel) => channel.weight > 0);
-  const channelPlans = PUBLISHING_CHANNELS.map((channel) => ({
-    ...channel,
-    allocation: channel.weight > 0 ? Math.round(budgetNum * channel.weight) : 0,
-  }));
-  const expectedReach = Math.round(
-    PUBLISHING_CHANNELS.reduce((sum, channel) => sum + channel.reach, 0) * Math.max(0.55, Math.min(1.35, budgetNum / 450)),
-  );
-  const expectedLeads = Math.max(8, Math.round(expectedReach * 0.018));
-  const savings = weightedChannels.length ? 28 : 0;
-  const ready = areaNum > 0 && calculatedTotal > 0 && form.village.trim().length > 0;
+  const minNegotiable = Number(form.minPricePerM.replace(/[^\d.]/g, "")) || 0;
+  const maxNegotiable = Number(form.maxPricePerM.replace(/[^\d.]/g, "")) || 0;
+  const validNegotiableRange = !form.negotiable || (minNegotiable > 0 && maxNegotiable > minNegotiable);
+  const ready = areaNum > 0 && calculatedTotal > 0 && form.village.trim().length > 0 && validNegotiableRange;
   const regulatorySummary = [
     `نوع التنظيم: ${form.zoningType || form.zoning}`,
     `نسبة البناء: ${form.buildingRatio}`,
@@ -658,6 +683,7 @@ function SellerPortal() {
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
                 <Field label="من (د.أ/م²)" value={form.minPricePerM} onChange={setText("minPricePerM")} placeholder="110" />
                 <Field label="إلى (د.أ/م²)" value={form.maxPricePerM} onChange={setText("maxPricePerM")} placeholder="130" />
+                {!validNegotiableRange ? <p className="text-xs font-bold text-destructive sm:col-span-2">يجب أن يكون الحد الأدنى أقل من الحد الأعلى.</p> : null}
               </div>
             ) : null}
             <div className="mt-4 rounded-xl border border-border bg-background/30 p-4">
@@ -699,12 +725,16 @@ function SellerPortal() {
               </GoldButton>
             </div>
           </div>
-          <Field
-            label="المميزات (افصل بفاصلة)"
-            value={form.features}
-            onChange={setText("features")}
-            placeholder="شارعان، إطلالة مفتوحة، خدمات واصلة"
-          />
+          <div className="space-y-1.5">
+            <span className="text-xs font-semibold text-muted-foreground">المميزات — افصل بفاصلة (،)</span>
+            <div className="flex gap-2">
+              <input value={form.features} onChange={(e) => setText("features")(e.target.value)} placeholder="شارعان، إطلالة مفتوحة، خدمات واصلة" className="w-full rounded-xl border border-input bg-background/40 px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary/70 focus:ring-2 focus:ring-primary/25" />
+              <GoldButton variant="outline" className="size-11 shrink-0 px-0" onClick={toggleVoiceInput}>
+                {listening ? <MicOff className="size-4" /> : <Mic className="size-4" />}
+                <span className="sr-only">{listening ? "إيقاف الإملاء" : "إملاء المميزات صوتياً"}</span>
+              </GoldButton>
+            </div>
+          </div>
         </GlassCard>
 
         {/* 3. Attachments */}
@@ -895,12 +925,6 @@ function SellerPortal() {
                   ))}
                 </div>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <Stat label="الإلحاح" value={pkg.urgency} />
-                <Stat label="الإثبات الاجتماعي" value={pkg.socialProof} />
-                <Stat label="الندرة" value={pkg.scarcity} />
-                <Stat label="الميزة التنافسية" value={pkg.competitiveEdge} />
-              </div>
               <div className="flex flex-wrap gap-2">
                 {pkg.hashtags.map((h) => (
                   <span key={h} className="rounded-full bg-primary/12 px-3 py-1 text-xs font-semibold text-primary">
@@ -908,9 +932,8 @@ function SellerPortal() {
                   </span>
                 ))}
               </div>
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-2">
                 <Stat label="قنوات النشر" value={pkg.channels.join(" · ")} />
-                <Stat label="الميزانية المقترحة" value={pkg.budget} />
                 <Stat label="أفضل وقت للنشر" value={pkg.postingTime} />
                 <Stat label="استراتيجية التسعير" value={pkg.pricingStrategy} />
                 <Stat label="المدة المتوقعة للبيع" value={pkg.expectedTimeToSell} />
@@ -935,55 +958,9 @@ function SellerPortal() {
             </div>
           ) : null}
 
-          <div className="space-y-4 rounded-2xl border border-border bg-background/20 p-4">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <p className="text-base font-black">قنوات النشر المقترحة</p>
-                <p className="text-xs text-muted-foreground">أفضل وقت: الخميس والجمعة 7-10 مساءً</p>
-              </div>
-              <label className="block min-w-48 space-y-1.5">
-                <span className="text-xs font-semibold text-muted-foreground">إجمالي الميزانية (د.أ)</span>
-                <input
-                  value={marketingBudget}
-                  onChange={(e) => setMarketingBudget(e.target.value)}
-                  inputMode="decimal"
-                  className="w-full rounded-xl border border-input bg-background/40 px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary/70 focus:ring-2 focus:ring-primary/25"
-                />
-              </label>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {channelPlans.map((channel) => (
-                <div key={channel.name} className="rounded-xl border border-border bg-background/30 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2">
-                      <span className="grid size-9 place-items-center rounded-xl bg-primary/15 text-xs font-black text-primary">
-                        {channel.logo}
-                      </span>
-                      <div>
-                        <p className="text-sm font-black">{channel.name}</p>
-                        <p className="text-[11px] text-muted-foreground">{channel.cost}</p>
-                      </div>
-                    </div>
-                    <span className={`rounded-full px-2 py-1 text-[11px] font-black ${channel.priority === "عالية" ? "bg-primary text-primary-foreground" : channel.priority === "متوسطة" ? "bg-secondary text-secondary-foreground" : "border border-border text-muted-foreground"}`}>
-                      {channel.priority}
-                    </span>
-                  </div>
-                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                    <p>الوصول: {fmt(channel.reach)} مشاهدة</p>
-                    <p>التوزيع: {channel.allocation ? `${fmt(channel.allocation)} د.أ` : "مجاني"}</p>
-                    <p className="col-span-2">أفضل وقت: {channel.bestTime}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Stat label="الوصول المتوقع" value={`${fmt(expectedReach)} مشاهدة`} />
-              <Stat label="عملاء محتملون" value={`${fmt(expectedLeads)} lead`} />
-              <Stat label="التوفير" value={`وفّر ${savings}% مقارنة بالتسويق التقليدي`} />
-            </div>
-            <p className="rounded-xl border border-secondary/45 bg-secondary/15 px-4 py-3 text-sm font-bold text-secondary-foreground">
-              متابعة الأداء تبدأ بعد النشر لقياس المشاهدات والتواصل والقنوات الأعلى فعالية.
-            </p>
+          <div className="rounded-2xl border border-border bg-background/20 p-4">
+            <p className="text-sm font-black">النشر المبسط</p>
+            <p className="mt-1 text-xs text-muted-foreground">سننشر الإعلان على القنوات المقترحة في الوقت الأنسب فور اعتماد الحزمة.</p>
           </div>
 
           {published ? (
