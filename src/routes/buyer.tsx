@@ -283,6 +283,8 @@ function BuyerPortal() {
         parking: preferences.parking ?? current.parking,
       }));
       setMessages((m) => [...m, { role: "assistant", text: reply }]);
+      void speakReply(reply);
+
     } catch (e) {
       setChatError(e instanceof Error ? e.message : "تعذر الاتصال بالمستشار.");
     } finally {
