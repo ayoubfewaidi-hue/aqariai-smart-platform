@@ -16,6 +16,8 @@ import {
   Skeleton,
 } from "@/components/ui-kit";
 import { askAdvisor } from "@/lib/ai.functions";
+import { VoicePlayer, getRecognition } from "@/lib/speech";
+
 import {
   DEFAULT_BUYER,
   FEATURED_PLOTS,
