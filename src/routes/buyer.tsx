@@ -145,18 +145,19 @@ function BuyerPortal() {
 
   const ranked = useMemo(() => {
     const raw = query.trim();
-    const q = normalizeArabic(raw);
+    const tokens = normalizeArabic(raw).split(/\s+/).filter((t) => t.length >= 2);
     return allProperties
-      .filter(
-        (p) =>
-          !q ||
-          normalizeArabic(
-            `${p.title} ${p.village} ${p.city} ${p.type} ${p.zoning} ${p.basin}`,
-          ).includes(q),
-      )
+      .filter((p) => {
+        if (!tokens.length) return true;
+        const haystack = normalizeArabic(
+          `${p.title} ${p.village} ${p.city} ${p.type} ${p.zoning} ${p.basin} ${p.summary} ${p.features.join(" ")}`,
+        );
+        return tokens.some((t) => haystack.includes(t));
+      })
       .map((p) => ({ p, score: matchScore(p, { ...profile, searches: [raw] }) }))
       .sort((a, b) => b.score - a.score);
   }, [allProperties, profile, query]);
+
 
   const suggestions = useMemo(() => findSearchAreas(query), [query]);
   const searchedArea = useMemo(
