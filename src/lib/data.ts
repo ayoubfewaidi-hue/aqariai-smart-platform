@@ -539,6 +539,12 @@ export type BuyerProfile = {
   areas: string[];
   familySize: number;
   goal: "سكن" | "استثمار" | "تطوير";
+  propertyType: Property["type"] | "";
+  minArea: number;
+  rooms: number;
+  garden: boolean;
+  balcony: boolean;
+  parking: boolean;
   favorites: string[];
   searches: string[];
 };
@@ -548,6 +554,12 @@ export const DEFAULT_BUYER: BuyerProfile = {
   areas: [],
   familySize: 4,
   goal: "سكن",
+  propertyType: "",
+  minArea: 0,
+  rooms: 0,
+  garden: false,
+  balcony: false,
+  parking: false,
   favorites: [],
   searches: [],
 };
@@ -567,6 +579,12 @@ export function matchScore(p: Property, profile: BuyerProfile) {
 
   if (profile.familySize >= 5 && p.area >= 500) score += 6;
   if (profile.familySize <= 3 && p.area <= 200) score += 5;
+  if (profile.propertyType && p.type === profile.propertyType) score += 10;
+  if (profile.minArea > 0 && p.area >= profile.minArea) score += 7;
+  if (profile.rooms > 0 && p.features.some((feature) => feature.includes(`${profile.rooms} غرف`))) score += 5;
+  if (profile.garden && p.features.some((feature) => feature.includes("حديقة"))) score += 4;
+  if (profile.balcony && p.features.some((feature) => feature.includes("شرفة"))) score += 4;
+  if (profile.parking && p.features.some((feature) => feature.includes("موقف"))) score += 4;
   if (profile.favorites.includes(p.id)) score += 5;
   if (profile.searches.some((s) => s && (p.title.includes(s) || p.village.includes(s)))) score += 4;
 
@@ -583,6 +601,8 @@ export function matchReasons(p: Property, profile: BuyerProfile) {
   if (profile.familySize >= 5 && p.area >= 500) out.push("مساحة مناسبة لعائلة كبيرة");
   if (profile.areas.some((a) => p.village.includes(a) || p.city.includes(a)))
     out.push("في منطقة تفضيلك");
+  if (profile.propertyType && p.type === profile.propertyType) out.push(`نوع العقار المطلوب: ${p.type}`);
+  if (profile.minArea > 0 && p.area >= profile.minArea) out.push("يلبي الحد الأدنى للمساحة");
   return out.slice(0, 4);
 }
 

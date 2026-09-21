@@ -1,6 +1,6 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowUpLeft, Bot, BadgeCheck, Heart, MapPin, Mountain, Ruler, Search, SearchX, Send, Share2, Sparkles } from "lucide-react";
+import { ArrowUpLeft, BadgeCheck, Heart, MapPin, Mountain, Ruler, Search, SearchX, Send, Share2, Sparkles, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -56,8 +56,6 @@ export const Route = createFileRoute("/buyer")({
   }),
   component: BuyerPortal,
 });
-
-const GOALS: BuyerProfile["goal"][] = ["سكن", "استثمار", "تطوير"];
 
 type Msg = { role: "user" | "assistant"; text: string };
 
@@ -190,7 +188,7 @@ function BuyerPortal() {
     setMessages((m) => [...m, { role: "user", text }]);
     setThinking(true);
     try {
-      const { reply } = await advisor({
+      const { reply, preferences } = await advisor({
         data: {
           message: text,
           history,
@@ -207,11 +205,24 @@ function BuyerPortal() {
           ].join("\n"),
           profile: `الميزانية: ${profile.budget} د.أ | المناطق: ${
             profile.areas.join("، ") || "غير محددة"
-          } | أفراد العائلة: ${profile.familySize} | الهدف: ${profile.goal} | المفضلة: ${
+          } | أفراد العائلة: ${profile.familySize} | الهدف: ${profile.goal} | النوع: ${profile.propertyType || "غير محدد"} | المساحة الدنيا: ${profile.minArea || "غير محددة"} | الغرف: ${profile.rooms || "غير محددة"} | المفضلة: ${
             profile.favorites.join("، ") || "لا شيء"
           }`,
         },
       });
+      setProfile((current) => ({
+        ...current,
+        budget: preferences.budget ?? current.budget,
+        areas: preferences.areas.length ? preferences.areas : current.areas,
+        familySize: preferences.familySize ?? current.familySize,
+        goal: preferences.goal ?? current.goal,
+        propertyType: preferences.propertyType ?? current.propertyType,
+        minArea: preferences.minArea ?? current.minArea,
+        rooms: preferences.rooms ?? current.rooms,
+        garden: preferences.garden ?? current.garden,
+        balcony: preferences.balcony ?? current.balcony,
+        parking: preferences.parking ?? current.parking,
+      }));
       setMessages((m) => [...m, { role: "assistant", text: reply }]);
     } catch (e) {
       setChatError(e instanceof Error ? e.message : "تعذر الاتصال بالمستشار.");
@@ -285,52 +296,24 @@ function BuyerPortal() {
             ) : null}
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-3">
-            <label className="space-y-2">
-              <span className="text-xs font-semibold text-muted-foreground">
-                الميزانية: {fmt(profile.budget)} د.أ
-              </span>
-              <input
-                type="range"
-                min={50000}
-                max={1200000}
-                step={10000}
-                value={profile.budget}
-                onChange={(e) => setProfile((p) => ({ ...p, budget: Number(e.target.value) }))}
-                className="w-full accent-[var(--gold)]"
-              />
-            </label>
-            <label className="space-y-2">
-              <span className="text-xs font-semibold text-muted-foreground">
-                أفراد العائلة: {profile.familySize}
-              </span>
-              <input
-                type="range"
-                min={1}
-                max={8}
-                value={profile.familySize}
-                onChange={(e) => setProfile((p) => ({ ...p, familySize: Number(e.target.value) }))}
-                className="w-full accent-[var(--gold)]"
-              />
-            </label>
-            <div className="space-y-2">
-              <span className="text-xs font-semibold text-muted-foreground">الهدف</span>
-              <div className="flex gap-1.5">
-                {GOALS.map((g) => (
-                  <button
-                    key={g}
-                    onClick={() => setProfile((p) => ({ ...p, goal: g }))}
-                    className={`flex-1 rounded-lg px-2 py-2 text-xs font-bold transition ${
-                      profile.goal === g
-                        ? "bg-primary text-primary-foreground"
-                        : "border border-border text-muted-foreground hover:bg-accent"
-                    }`}
-                  >
-                    {g}
-                  </button>
-                ))}
-              </div>
+          <div className="rounded-xl border border-border bg-background/25 p-4">
+            <p className="mb-3 text-xs text-muted-foreground">اذكر ميزانيتك والمنطقة ونوع العقار والمساحة والغرف والحديقة والشرفة والموقف بطريقتك.</p>
+            <div className="max-h-64 space-y-3 overflow-y-auto pe-1">
+              {messages.map((m, i) => <div key={i} className={`max-w-[88%] rounded-xl px-3 py-2 text-sm ${m.role === "user" ? "ms-auto bg-primary/15" : "bg-background/40"}`}>{m.text}</div>)}
+              {thinking ? <Skeleton className="h-12 w-2/3" /> : null}
             </div>
+            {chatError ? <ErrorNote message={chatError} /> : null}
+            <div className="mt-3 flex gap-2">
+              <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void send(); }} placeholder="مثال: أريد فيلا في دابوق بحديقة و4 غرف" className="flex-1 rounded-xl border border-input bg-background/40 px-4 py-3 text-sm outline-none focus:border-primary/70" />
+              <GoldButton onClick={() => void send()} loading={thinking}><Send className="size-4" /> إرسال</GoldButton>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {[`ميزانية ${fmt(profile.budget)} د.أ`, profile.goal, profile.propertyType, profile.minArea ? `${profile.minArea}م² فأكثر` : "", profile.rooms ? `${profile.rooms} غرف` : "", profile.garden ? "حديقة" : "", profile.balcony ? "شرفة" : "", profile.parking ? "موقف" : "", ...profile.areas].filter(Boolean).map((value) => (
+              <span key={String(value)} className="inline-flex items-center gap-1 rounded-full border border-primary/35 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary">{value}</span>
+            ))}
+            <button type="button" onClick={() => setProfile({ ...DEFAULT_BUYER, favorites: profile.favorites })} className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground"><X className="size-3" /> مسح التفضيلات</button>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -452,41 +435,6 @@ function BuyerPortal() {
           )}
         </section>
 
-        <GlassCard strong className="fade-up space-y-4">
-          <h2 className="flex items-center gap-2 text-lg font-bold">
-            <Bot className="size-5 text-primary" /> المستشار العقاري الذكي
-          </h2>
-          <div className="max-h-80 space-y-3 overflow-y-auto pe-1">
-            {messages.map((m, i) => (
-              <div
-                key={i}
-                className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                  m.role === "user"
-                    ? "ms-auto border border-primary/35 bg-primary/15 text-foreground"
-                    : "border border-border bg-background/35"
-                }`}
-              >
-                {m.text}
-              </div>
-            ))}
-            {thinking ? <Skeleton className="h-14 w-2/3" /> : null}
-          </div>
-          {chatError ? <ErrorNote message={chatError} /> : null}
-          <div className="flex gap-2">
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void send();
-              }}
-              placeholder="مثال: ميزانيتي 500 ألف وأبحث عن أرض للاستثمار"
-              className="flex-1 rounded-xl border border-input bg-background/40 px-4 py-3 text-sm outline-none focus:border-primary/70"
-            />
-            <GoldButton onClick={() => void send()} loading={thinking}>
-              <Send className="size-4" /> إرسال
-            </GoldButton>
-          </div>
-        </GlassCard>
       </main>
       <SiteFooter />
     </div>
