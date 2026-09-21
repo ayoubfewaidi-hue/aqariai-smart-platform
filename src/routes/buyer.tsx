@@ -87,6 +87,60 @@ function BuyerPortal() {
   const [chatError, setChatError] = useState<string | null>(null);
   const [sellerDraft, setSellerDraft] = useState<SellerDraftProperty | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const [voiceReply, setVoiceReply] = useState(true);
+  const recognitionRef = useRef<{ stop: () => void } | null>(null);
+  const playerRef = useRef<VoicePlayer | null>(null);
+
+  useEffect(() => () => {
+    recognitionRef.current?.stop();
+    playerRef.current?.stop();
+  }, []);
+
+  function stopSpeaking() {
+    playerRef.current?.stop();
+    setSpeaking(false);
+  }
+
+  async function speakReply(text: string) {
+    if (!voiceReply || !text) return;
+    playerRef.current ??= new VoicePlayer();
+    setSpeaking(true);
+    try {
+      await playerRef.current.speak(text);
+    } catch {
+      toast.error("تعذر تشغيل الرد الصوتي");
+    } finally {
+      setSpeaking(false);
+    }
+  }
+
+  function toggleListening() {
+    if (listening) {
+      recognitionRef.current?.stop();
+      return;
+    }
+    const recognition = getRecognition();
+    if (!recognition) {
+      toast.error("الإدخال الصوتي غير مدعوم في هذا المتصفح");
+      return;
+    }
+    stopSpeaking();
+    recognition.onstart = () => setListening(true);
+    recognition.onend = () => setListening(false);
+    recognition.onerror = () => {
+      setListening(false);
+      toast.error("تعذر تشغيل الإدخال الصوتي");
+    };
+    recognition.onresult = (event) => {
+      const transcript = event.results[0]?.[0]?.transcript?.trim();
+      if (transcript) void send(transcript);
+    };
+    recognitionRef.current = recognition;
+    recognition.start();
+  }
+
 
   useEffect(() => {
     try {
