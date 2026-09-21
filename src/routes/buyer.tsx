@@ -366,7 +366,7 @@ function BuyerPortal() {
             {chatError ? <ErrorNote message={chatError} /> : null}
             <div className="mt-3 flex gap-2">
               <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void send(); }} placeholder="اضغط الميكروفون وتحدث، أو اكتب هنا" className="flex-1 rounded-xl border border-input bg-background/40 px-4 py-3 text-sm outline-none focus:border-primary/70" />
-              <GoldButton variant={listening ? "solid" : "outline"} className="size-11 shrink-0 px-0" onClick={toggleListening}>
+              <GoldButton variant={listening ? "emerald" : "outline"} className="size-11 shrink-0 px-0" onClick={toggleListening}>
                 {listening ? <MicOff className="size-4" /> : <Mic className="size-4" />}
                 <span className="sr-only">{listening ? "إيقاف التحدث" : "تحدث مع المستشار"}</span>
               </GoldButton>
