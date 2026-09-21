@@ -237,10 +237,11 @@ function BuyerPortal() {
       areas: pr.areas.includes(a) ? pr.areas.filter((x) => x !== a) : [...pr.areas, a],
     }));
 
-  async function send() {
-    const text = input.trim();
+  async function send(spoken?: string) {
+    const text = (spoken ?? input).trim();
     if (!text || thinking) return;
     setInput("");
+
     setChatError(null);
     const history = messages.slice(-8);
     setMessages((m) => [...m, { role: "user", text }]);
