@@ -1,7 +1,8 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowUpLeft, BadgeCheck, Heart, MapPin, Mountain, Ruler, Search, SearchX, Send, Share2, Sparkles, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { ArrowUpLeft, BadgeCheck, Heart, MapPin, Mic, MicOff, Mountain, Ruler, Search, SearchX, Send, Share2, Sparkles, Volume2, VolumeX, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+
 import { toast } from "sonner";
 
 import {
