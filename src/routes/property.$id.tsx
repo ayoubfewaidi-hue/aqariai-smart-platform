@@ -210,7 +210,7 @@ function FeaturedPlotDetail({ plot }: { plot: (typeof FEATURED_PLOTS)[number] })
         <GlassCard strong className="space-y-4">
           <h2 className="text-xl font-black">سيناريوهات الاستثمار</h2>
           <div className="flex flex-wrap gap-2">
-            {plot.investmentScenarios.map((scenario) => (
+            {scenarios.map((scenario) => (
               <button
                 key={scenario.name}
                 type="button"
