@@ -423,12 +423,132 @@ function BuyerPortal() {
             </div>
           </div>
 
+          <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
+            <p className="mb-3 flex items-center gap-2 text-sm font-black text-primary">
+              <Wallet className="size-4" /> بيانات البحث والمطابقة — حدّدها بنفسك
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <label className="space-y-1 text-xs text-muted-foreground">
+                الميزانية (د.أ)
+                <input
+                  inputMode="numeric"
+                  value={profile.budget ? String(profile.budget) : ""}
+                  onChange={(e) => setNum("budget", e.target.value)}
+                  placeholder="مثال: 250000"
+                  className="w-full rounded-xl border border-input bg-background/40 px-3 py-2.5 text-sm font-bold outline-none focus:border-primary/70"
+                />
+              </label>
+              <label className="space-y-1 text-xs text-muted-foreground">
+                عدد أفراد الأسرة
+                <input
+                  inputMode="numeric"
+                  value={profile.familySize ? String(profile.familySize) : ""}
+                  onChange={(e) => setNum("familySize", e.target.value)}
+                  placeholder="مثال: 5"
+                  className="w-full rounded-xl border border-input bg-background/40 px-3 py-2.5 text-sm font-bold outline-none focus:border-primary/70"
+                />
+              </label>
+              <label className="space-y-1 text-xs text-muted-foreground">
+                المساحة المطلوبة (م²)
+                <input
+                  inputMode="numeric"
+                  value={profile.minArea ? String(profile.minArea) : ""}
+                  onChange={(e) => setNum("minArea", e.target.value)}
+                  placeholder="مثال: 500"
+                  className="w-full rounded-xl border border-input bg-background/40 px-3 py-2.5 text-sm font-bold outline-none focus:border-primary/70"
+                />
+              </label>
+              <label className="space-y-1 text-xs text-muted-foreground">
+                عدد الغرف
+                <input
+                  inputMode="numeric"
+                  value={profile.rooms ? String(profile.rooms) : ""}
+                  onChange={(e) => setNum("rooms", e.target.value)}
+                  placeholder="مثال: 4"
+                  className="w-full rounded-xl border border-input bg-background/40 px-3 py-2.5 text-sm font-bold outline-none focus:border-primary/70"
+                />
+              </label>
+              <label className="space-y-1 text-xs text-muted-foreground">
+                نوع العقار
+                <select
+                  value={profile.propertyType}
+                  onChange={(e) => setProfile((pr) => ({ ...pr, propertyType: e.target.value as BuyerProfile["propertyType"] }))}
+                  className="w-full rounded-xl border border-input bg-background/40 px-3 py-2.5 text-sm font-bold outline-none focus:border-primary/70"
+                >
+                  <option value="">أي نوع</option>
+                  <option value="أرض">أرض</option>
+                  <option value="فيلا">فيلا</option>
+                  <option value="شقة">شقة</option>
+                  <option value="مزرعة">مزرعة</option>
+                </select>
+              </label>
+              <label className="space-y-1 text-xs text-muted-foreground">
+                الهدف
+                <select
+                  value={profile.goal}
+                  onChange={(e) => setProfile((pr) => ({ ...pr, goal: e.target.value as BuyerProfile["goal"] }))}
+                  className="w-full rounded-xl border border-input bg-background/40 px-3 py-2.5 text-sm font-bold outline-none focus:border-primary/70"
+                >
+                  <option value="سكن">سكن</option>
+                  <option value="استثمار">استثمار</option>
+                  <option value="تطوير">تطوير</option>
+                </select>
+              </label>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {(["garden", "balcony", "parking"] as const).map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setProfile((pr) => ({ ...pr, [key]: !pr[key] }))}
+                  className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${profile[key] ? "bg-secondary text-secondary-foreground" : "border border-border text-muted-foreground hover:bg-accent"}`}
+                >
+                  {key === "garden" ? "حديقة" : key === "balcony" ? "شرفة" : "موقف"}
+                </button>
+              ))}
+            </div>
+            <p className="mt-3 text-[11px] text-muted-foreground">
+              يمكنك أيضاً ذكر هذه البيانات صوتياً للمستشار وسيعبّئها تلقائياً. تُستخدم في البحث ودرجة المطابقة وتقييم كفاية الميزانية.
+            </p>
+          </div>
+
+          {budgetCheck ? (
+            <div
+              className={`rounded-xl border p-4 text-sm font-bold leading-relaxed ${
+                budgetCheck.enough
+                  ? "border-secondary/45 bg-secondary/12 text-secondary-foreground"
+                  : "border-primary/45 bg-primary/12 text-primary"
+              }`}
+            >
+              <p className="flex items-start gap-2">
+                {budgetCheck.enough ? <BadgeCheck className="mt-0.5 size-4 shrink-0" /> : <AlertTriangle className="mt-0.5 size-4 shrink-0" />}
+                {budgetCheck.message}
+              </p>
+              {affordableAreas.length ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span className="text-xs text-muted-foreground">مناطق داخل ميزانيتك:</span>
+                  {affordableAreas.map((alt) => (
+                    <Link
+                      key={alt.name}
+                      to="/area/$name"
+                      params={{ name: alt.name }}
+                      className="rounded-full border border-border bg-background/40 px-3 py-1 text-xs font-bold transition hover:border-primary/70"
+                    >
+                      {alt.name} · {fmt(alt.estimate)} د.أ تقديري
+                    </Link>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className="flex flex-wrap gap-2">
-            {[`ميزانية ${fmt(profile.budget)} د.أ`, profile.goal, profile.propertyType, profile.minArea ? `${profile.minArea}م² فأكثر` : "", profile.rooms ? `${profile.rooms} غرف` : "", profile.garden ? "حديقة" : "", profile.balcony ? "شرفة" : "", profile.parking ? "موقف" : "", ...profile.areas].filter(Boolean).map((value) => (
+            {[profile.budget ? `ميزانية ${fmt(profile.budget)} د.أ` : "", profile.goal, profile.propertyType, profile.familySize ? `${profile.familySize} أفراد` : "", profile.minArea ? `${profile.minArea}م² فأكثر` : "", profile.rooms ? `${profile.rooms} غرف` : "", profile.garden ? "حديقة" : "", profile.balcony ? "شرفة" : "", profile.parking ? "موقف" : "", ...profile.areas].filter(Boolean).map((value) => (
               <span key={String(value)} className="inline-flex items-center gap-1 rounded-full border border-primary/35 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary">{value}</span>
             ))}
             <button type="button" onClick={() => setProfile({ ...DEFAULT_BUYER, favorites: profile.favorites })} className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground"><X className="size-3" /> مسح التفضيلات</button>
           </div>
+
 
           <div className="flex flex-wrap gap-2">
             {recommendedAreas.map((area, index) => (
