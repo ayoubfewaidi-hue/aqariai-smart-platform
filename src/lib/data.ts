@@ -633,7 +633,7 @@ export function recommendAreas(profile: BuyerProfile, text: string) {
 
   return AREA_RECOMMENDATIONS.filter((area) => !isWest || area.westAmman)
     .map((area) => {
-      const budgetFit = Math.max(0, 100 - Math.round(Math.max(0, area.avgPricePerM * 1000 - effectiveBudget) / 8000));
+      const budgetFit = effectiveBudget > 0 ? Math.max(0, 100 - Math.round(Math.max(0, area.avgPricePerM * 1000 - effectiveBudget) / 8000)) : 72;
       const goalScore = goal === "استثمار" ? area.roiScore : goal === "سكن" ? area.amenitiesScore : goal === "سياحة" ? area.tourismScore : Math.round((area.roiScore + area.amenitiesScore) / 2);
       const demandBoost = area.demand.includes("جداً") ? 8 : area.demand.includes("عالي") ? 5 : 2;
       return {
@@ -1031,7 +1031,7 @@ export function areaListingCount(name: string) {
 export function areaMatchPercent(name: string, profile: BuyerProfile) {
   const area = getSearchArea(name);
   if (!area) return 62;
-  const budgetFit = Math.max(0, 100 - Math.round(Math.max(0, area.avgPricePerM * 1000 - profile.budget) / 9000));
+  const budgetFit = profile.budget > 0 ? Math.max(0, 100 - Math.round(Math.max(0, area.avgPricePerM * 1000 - profile.budget) / 9000)) : 72;
   const goalScore =
     profile.goal === "استثمار" ? 62 + area.growth * 1.6 : profile.goal === "تطوير" ? 58 + area.growth * 1.4 : 52 + area.demandStars * 9;
   return Math.max(58, Math.min(98, Math.round(goalScore * 0.6 + budgetFit * 0.32 + area.demandStars * 2)));
