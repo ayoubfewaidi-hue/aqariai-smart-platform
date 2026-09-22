@@ -422,6 +422,52 @@ function SellerPortal() {
     };
   }
 
+  async function publishProperty() {
+    const draft = buildDraftProperty();
+    if (!user) {
+      localStorage.setItem(SELLER_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+      toast.error("سجّل الدخول لحفظ عقارك بشكل دائم");
+      void navigate({ to: "/auth/login" });
+      return;
+    }
+    setPublishing(true);
+    try {
+      const images = await uploadImageDataUrls(
+        attachments.filter((item) => item.isImage).map((item) => ({ name: item.name, url: item.url })),
+      );
+      const id = await createProperty({
+        title: draft.title,
+        description: draft.summary,
+        type: draft.type,
+        dealType: "بيع",
+        price: draft.price,
+        pricePerM: draft.pricePerM,
+        area: draft.area,
+        negotiableMin: form.negotiable ? minNegotiable : null,
+        negotiableMax: form.negotiable ? maxNegotiable : null,
+        governorate: draft.city,
+        district: draft.village,
+        basin: draft.basin,
+        plot: draft.plot,
+        zoning: draft.zoning,
+        features: draft.features,
+        images,
+        coordinates: draft.coordinates,
+        score: draft.score,
+        regulatory: draft.regulatory,
+      });
+      localStorage.removeItem(SELLER_DRAFT_STORAGE_KEY);
+      setPublished(true);
+      setPublishedId(id);
+      toast.success("تم نشر العقار وحفظه في حسابك");
+      void navigate({ to: "/property/$id", params: { id } });
+    } catch (publishError) {
+      toast.error(publishError instanceof Error ? publishError.message : "تعذر نشر العقار");
+    } finally {
+      setPublishing(false);
+    }
+  }
+
   return (
     <div className="min-h-screen">
       <SiteHeader />
