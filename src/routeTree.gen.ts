@@ -17,6 +17,7 @@ import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as SellerRouteImport } from './routes/seller'
 import { Route as ApiTtsRouteImport } from './routes/api/tts'
 import { Route as AreaNameRouteImport } from './routes/area.$name'
+import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as PropertyIdRouteImport } from './routes/property.$id'
 
 const IndexRoute = IndexRouteImport.update({
@@ -59,6 +60,11 @@ const AreaNameRoute = AreaNameRouteImport.update({
   path: '/area/$name',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthLoginRoute = AuthLoginRouteImport.update({
+  id: '/auth/login',
+  path: '/auth/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PropertyIdRoute = PropertyIdRouteImport.update({
   id: '/property/$id',
   path: '/property/$id',
@@ -74,6 +80,7 @@ export interface FileRoutesByFullPath {
   '/seller': typeof SellerRoute
   '/api/tts': typeof ApiTtsRoute
   '/area/$name': typeof AreaNameRoute
+  '/auth/login': typeof AuthLoginRoute
   '/property/$id': typeof PropertyIdRoute
 }
 export interface FileRoutesByTo {
@@ -85,6 +92,7 @@ export interface FileRoutesByTo {
   '/seller': typeof SellerRoute
   '/api/tts': typeof ApiTtsRoute
   '/area/$name': typeof AreaNameRoute
+  '/auth/login': typeof AuthLoginRoute
   '/property/$id': typeof PropertyIdRoute
 }
 export interface FileRoutesById {
@@ -97,6 +105,7 @@ export interface FileRoutesById {
   '/seller': typeof SellerRoute
   '/api/tts': typeof ApiTtsRoute
   '/area/$name': typeof AreaNameRoute
+  '/auth/login': typeof AuthLoginRoute
   '/property/$id': typeof PropertyIdRoute
 }
 export interface FileRouteTypes {
@@ -110,6 +119,7 @@ export interface FileRouteTypes {
     | '/seller'
     | '/api/tts'
     | '/area/$name'
+    | '/auth/login'
     | '/property/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -121,6 +131,7 @@ export interface FileRouteTypes {
     | '/seller'
     | '/api/tts'
     | '/area/$name'
+    | '/auth/login'
     | '/property/$id'
   id:
     | '__root__'
@@ -132,6 +143,7 @@ export interface FileRouteTypes {
     | '/seller'
     | '/api/tts'
     | '/area/$name'
+    | '/auth/login'
     | '/property/$id'
   fileRoutesById: FileRoutesById
 }
@@ -144,6 +156,7 @@ export interface RootRouteChildren {
   SellerRoute: typeof SellerRoute
   ApiTtsRoute: typeof ApiTtsRoute
   AreaNameRoute: typeof AreaNameRoute
+  AuthLoginRoute: typeof AuthLoginRoute
   PropertyIdRoute: typeof PropertyIdRoute
 }
 
@@ -205,6 +218,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AreaNameRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/login': {
+      id: '/auth/login'
+      path: '/auth/login'
+      fullPath: '/auth/login'
+      preLoaderRoute: typeof AuthLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/property/$id': {
       id: '/property/$id'
       path: '/property/$id'
@@ -224,6 +244,7 @@ const rootRouteChildren: RootRouteChildren = {
   SellerRoute: SellerRoute,
   ApiTtsRoute: ApiTtsRoute,
   AreaNameRoute: AreaNameRoute,
+  AuthLoginRoute: AuthLoginRoute,
   PropertyIdRoute: PropertyIdRoute,
 }
 export const routeTree = rootRouteImport
