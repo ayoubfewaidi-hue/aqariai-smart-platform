@@ -550,9 +550,9 @@ export type BuyerProfile = {
 };
 
 export const DEFAULT_BUYER: BuyerProfile = {
-  budget: 600000,
+  budget: 0,
   areas: [],
-  familySize: 4,
+  familySize: 0,
   goal: "سكن",
   propertyType: "",
   minArea: 0,
@@ -566,9 +566,13 @@ export const DEFAULT_BUYER: BuyerProfile = {
 
 export function matchScore(p: Property, profile: BuyerProfile) {
   let score = 42;
-  const ratio = p.price / Math.max(profile.budget, 1);
-  if (ratio <= 1) score += 26 - Math.round(Math.abs(1 - ratio) * 10);
-  else score -= Math.min(30, Math.round((ratio - 1) * 40));
+  if (profile.budget > 0) {
+    const ratio = p.price / profile.budget;
+    if (ratio <= 1) score += 26 - Math.round(Math.abs(1 - ratio) * 10);
+    else score -= Math.min(30, Math.round((ratio - 1) * 40));
+  } else {
+    score += 10;
+  }
 
   if (profile.areas.length === 0 || profile.areas.some((a) => p.village.includes(a) || p.city.includes(a)))
     score += 12;
@@ -578,9 +582,10 @@ export function matchScore(p: Property, profile: BuyerProfile) {
   if (profile.goal === "تطوير") score += Math.round(p.area / 60) + (p.type === "أرض" ? 10 : 0);
 
   if (profile.familySize >= 5 && p.area >= 500) score += 6;
-  if (profile.familySize <= 3 && p.area <= 200) score += 5;
+  if (profile.familySize > 0 && profile.familySize <= 3 && p.area <= 200) score += 5;
   if (profile.propertyType && p.type === profile.propertyType) score += 10;
   if (profile.minArea > 0 && p.area >= profile.minArea) score += 7;
+  if (profile.minArea > 0 && p.area < profile.minArea) score -= 8;
   if (profile.rooms > 0 && p.features.some((feature) => feature.includes(`${profile.rooms} غرف`))) score += 5;
   if (profile.garden && p.features.some((feature) => feature.includes("حديقة"))) score += 4;
   if (profile.balcony && p.features.some((feature) => feature.includes("شرفة"))) score += 4;
@@ -593,7 +598,8 @@ export function matchScore(p: Property, profile: BuyerProfile) {
 
 export function matchReasons(p: Property, profile: BuyerProfile) {
   const out: string[] = [];
-  if (p.price <= profile.budget) out.push("داخل حدود ميزانيتك");
+  if (profile.budget <= 0) out.push("حدّد ميزانيتك لتقييم السعر بدقة");
+  else if (p.price <= profile.budget) out.push("داخل حدود ميزانيتك");
   else out.push(`أعلى من ميزانيتك بـ ${fmt(p.price - profile.budget)} د.أ`);
   if (profile.goal === "استثمار") out.push(`نمو سنوي متوقع ${p.growth}%`);
   if (profile.goal === "سكن") out.push(`مؤشر خدمات ${p.services}/100`);
@@ -605,6 +611,7 @@ export function matchReasons(p: Property, profile: BuyerProfile) {
   if (profile.minArea > 0 && p.area >= profile.minArea) out.push("يلبي الحد الأدنى للمساحة");
   return out.slice(0, 4);
 }
+
 
 export function smartPropertyScore(p: Property) {
   return Math.max(55, Math.min(97, Math.round(p.growth * 1.2 + p.liquidity * 0.38 + p.services * 0.42)));
