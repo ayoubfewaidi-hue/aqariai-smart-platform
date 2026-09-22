@@ -880,16 +880,7 @@ function SellerPortal() {
             <GoldButton onClick={buildMarketing} loading={pkgLoading} disabled={!ready}>
               <Megaphone className="size-4" /> ولّد الحزمة التسويقية
             </GoldButton>
-            <GoldButton
-              variant="emerald"
-              disabled={!pkg}
-              onClick={() => {
-                localStorage.setItem(SELLER_DRAFT_STORAGE_KEY, JSON.stringify(buildDraftProperty()));
-                setPublished(true);
-                toast.success("تم نشر العقار على القنوات المقترحة");
-                void navigate({ to: "/property/$id", params: { id: "seller-draft" } });
-              }}
-            >
+            <GoldButton variant="emerald" disabled={!pkg} loading={publishing} onClick={() => void publishProperty()}>
               <Rocket className="size-4" /> انشر الآن
             </GoldButton>
           </div>
