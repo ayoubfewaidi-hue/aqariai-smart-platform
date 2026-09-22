@@ -761,7 +761,7 @@ function PropertyCard({
   budget: number;
 }) {
   const smartScore = smartPropertyScore(p);
-  const budgetStatus = p.price <= budget ? "داخل ميزانيتك" : `أعلى من ميزانيتك بـ ${fmt(p.price - budget)} د.أ`;
+  const budgetStatus = budget <= 0 ? "حدّد ميزانيتك لمقارنة السعر" : p.price <= budget ? "داخل ميزانيتك" : `أعلى من ميزانيتك بـ ${fmt(p.price - budget)} د.أ`;
   return (
     <article className="glass fade-up overflow-hidden rounded-2xl transition-all duration-300 hover:-translate-y-1">
       <div className="relative">
@@ -793,7 +793,7 @@ function PropertyCard({
             <p className="mt-1 text-sm font-black text-primary">{fmt(p.price)} د.أ</p>
           </div>
         </div>
-        <p className={`rounded-xl px-3 py-2 text-xs font-black ${p.price <= budget ? "bg-secondary/20 text-secondary-foreground" : "bg-primary/12 text-primary"}`}>
+        <p className={`rounded-xl px-3 py-2 text-xs font-black ${budget > 0 && p.price <= budget ? "bg-secondary/20 text-secondary-foreground" : "bg-primary/12 text-primary"}`}>
           {budgetStatus}
         </p>
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-background/50">
