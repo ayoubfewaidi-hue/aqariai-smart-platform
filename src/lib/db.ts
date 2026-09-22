@@ -278,3 +278,15 @@ export async function registerView(propertyId: string): Promise<void> {
 export function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }
+
+/** Uploads already-previewed images (data URLs) to storage and returns signed URLs. */
+export async function uploadImageDataUrls(items: { name: string; url: string }[]): Promise<string[]> {
+  const files: File[] = [];
+  for (const item of items) {
+    if (!item.url.startsWith("data:image/")) continue;
+    const blob = await (await fetch(item.url)).blob();
+    files.push(new File([blob], item.name, { type: blob.type }));
+  }
+  if (!files.length) return [];
+  return uploadPropertyImages(files);
+}
