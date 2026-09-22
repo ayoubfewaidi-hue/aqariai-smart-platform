@@ -245,6 +245,16 @@ function BuyerPortal() {
     [query],
   );
   const alternatives = useMemo(() => nearbyAlternatives(searchedArea, profile), [profile, searchedArea]);
+  const budgetCheck = useMemo(
+    () => (query.trim().length >= 2 ? budgetFeasibility(searchedArea, profile) : null),
+    [profile, query, searchedArea],
+  );
+  const affordableAreas = useMemo(
+    () => (budgetCheck && !budgetCheck.enough ? affordableAlternatives(searchedArea, profile) : []),
+    [budgetCheck, profile, searchedArea],
+  );
+  const setNum = (key: "budget" | "familySize" | "minArea" | "rooms", value: string) =>
+    setProfile((pr) => ({ ...pr, [key]: Math.max(0, Number(value.replace(/[^\d]/g, "")) || 0) }));
 
   const toggleFav = (id: string) => {
     const wasFavorite = profile.favorites.includes(id);
