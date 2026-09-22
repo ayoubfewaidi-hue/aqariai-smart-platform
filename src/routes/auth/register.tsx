@@ -38,9 +38,9 @@ function RegisterPage() {
   const [sent, setSent] = useState(false);
 
   async function register() {
-    if (!fullName.trim()) return toast.error("أدخل الاسم الكامل");
+    if (!fullName.trim()) { toast.error("أدخل الاسم الكامل"); return; }
     if (!email.trim() || password.length < 6)
-      return toast.error("أدخل بريداً صحيحاً وكلمة مرور من 6 أحرف على الأقل");
+      { toast.error("أدخل بريداً صحيحاً وكلمة مرور من 6 أحرف على الأقل"); return; }
     setLoading(true);
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
@@ -51,10 +51,10 @@ function RegisterPage() {
       },
     });
     setLoading(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     if (!data.session) {
       setSent(true);
-      return toast.success("تحقق من بريدك الإلكتروني لتأكيد الحساب");
+      { toast.success("تحقق من بريدك الإلكتروني لتأكيد الحساب"); return; }
     }
     toast.success("تم إنشاء الحساب");
     void navigate({ to: "/seller" });
@@ -64,7 +64,7 @@ function RegisterPage() {
     const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
     });
-    if ("error" in result && result.error) return toast.error("تعذر الدخول عبر Google");
+    if ("error" in result && result.error) { toast.error("تعذر الدخول عبر Google"); return; }
     if ("redirected" in result && result.redirected) return;
     void navigate({ to: "/seller" });
   }

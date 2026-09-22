@@ -500,7 +500,7 @@ function DbPropertyDetail({ id }: { id: string }) {
   }, [id, user]);
 
   async function onToggleFav() {
-    if (!user) return toast.error("سجّل الدخول لحفظ المفضلة");
+    if (!user) { toast.error("سجّل الدخول لحفظ المفضلة"); return; }
     try {
       await toggleFavorite(id, fav);
       setFav(!fav);
@@ -510,8 +510,8 @@ function DbPropertyDetail({ id }: { id: string }) {
   }
 
   async function sendInquiry() {
-    if (!user) return toast.error("سجّل الدخول لإرسال استفسار");
-    if (!message.trim()) return toast.error("اكتب نص الاستفسار");
+    if (!user) { toast.error("سجّل الدخول لإرسال استفسار"); return; }
+    if (!message.trim()) { toast.error("اكتب نص الاستفسار"); return; }
     setSending(true);
     try {
       await createInquiry(id, message.trim());
