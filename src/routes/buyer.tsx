@@ -302,10 +302,14 @@ function BuyerPortal() {
                 `قطعة ${p.name} ${p.plot} | أرض | ${p.areaText} | ${p.total} د.أ | ${p.pricePerM} د.أ/م² | Smart Score ${p.score} | ${p.zoning}`,
             ),
             `مناطق ذكية مقترحة الآن: ${recommendedAreas.map((a) => `${a.name} مطابقة ${a.match}% وسعر ${a.avgPricePerM} د.أ/م²`).join("؛ ")}`,
-          ].join("\n"),
-          profile: `الميزانية: ${profile.budget} د.أ | المناطق: ${
+            budgetCheck ? `تقييم كفاية الميزانية: ${budgetCheck.message}` : "",
+            affordableAreas.length
+              ? `مناطق داخل ميزانيته: ${affordableAreas.map((a) => `${a.name} بتقدير ${a.estimate} د.أ`).join("؛ ")}`
+              : "",
+          ].filter(Boolean).join("\n"),
+          profile: `الميزانية: ${profile.budget > 0 ? `${profile.budget} د.أ` : "غير محددة — اسأل الزبون عنها"} | المناطق: ${
             profile.areas.join("، ") || "غير محددة"
-          } | أفراد العائلة: ${profile.familySize} | الهدف: ${profile.goal} | النوع: ${profile.propertyType || "غير محدد"} | المساحة الدنيا: ${profile.minArea || "غير محددة"} | الغرف: ${profile.rooms || "غير محددة"} | المفضلة: ${
+          } | أفراد العائلة: ${profile.familySize || "غير محدد — اسأل الزبون"} | الهدف: ${profile.goal} | النوع: ${profile.propertyType || "غير محدد"} | المساحة المطلوبة: ${profile.minArea || "غير محددة"} | الغرف: ${profile.rooms || "غير محددة"} | المفضلة: ${
             profile.favorites.join("، ") || "لا شيء"
           }`,
         },
