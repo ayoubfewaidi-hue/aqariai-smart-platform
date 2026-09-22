@@ -210,6 +210,7 @@ export function SiteHeader() {
           >
             تواصل
           </Link>
+          <AuthNav />
         </nav>
       </div>
     </header>
