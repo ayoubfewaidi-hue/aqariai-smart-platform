@@ -88,6 +88,8 @@ function BuyerPortal() {
   const [thinking, setThinking] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
   const [sellerDraft, setSellerDraft] = useState<SellerDraftProperty | null>(null);
+  const [dbProperties, setDbProperties] = useState<DbProperty[]>([]);
+  const { user } = useSession();
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
