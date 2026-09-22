@@ -255,7 +255,6 @@ function BuyerPortal() {
   );
   const setNum = (key: "budget" | "familySize" | "minArea" | "rooms", value: string) => {
     const next = Math.max(0, Number(value.replace(/[^\d]/g, "")) || 0);
-    console.log("setNum", key, value, next);
     setProfile((pr) => ({ ...pr, [key]: next }));
   };
 
