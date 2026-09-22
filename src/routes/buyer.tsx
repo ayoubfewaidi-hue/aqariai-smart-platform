@@ -253,8 +253,11 @@ function BuyerPortal() {
     () => (budgetCheck && !budgetCheck.enough ? affordableAlternatives(searchedArea, profile) : []),
     [budgetCheck, profile, searchedArea],
   );
-  const setNum = (key: "budget" | "familySize" | "minArea" | "rooms", value: string) =>
-    setProfile((pr) => ({ ...pr, [key]: Math.max(0, Number(value.replace(/[^\d]/g, "")) || 0) }));
+  const setNum = (key: "budget" | "familySize" | "minArea" | "rooms", value: string) => {
+    const next = Math.max(0, Number(value.replace(/[^\d]/g, "")) || 0);
+    console.log("setNum", key, value, next);
+    setProfile((pr) => ({ ...pr, [key]: next }));
+  };
 
   const toggleFav = (id: string) => {
     const wasFavorite = profile.favorites.includes(id);
