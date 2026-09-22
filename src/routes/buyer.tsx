@@ -1,6 +1,6 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowUpLeft, BadgeCheck, Heart, MapPin, Mic, MicOff, Mountain, Ruler, Search, SearchX, Send, Share2, Sparkles, Volume2, VolumeX, X } from "lucide-react";
+import { AlertTriangle, ArrowUpLeft, BadgeCheck, Heart, MapPin, Mic, MicOff, Mountain, Ruler, Search, SearchX, Send, Share2, Sparkles, Volume2, VolumeX, Wallet, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { toast } from "sonner";
@@ -25,8 +25,10 @@ import {
   FEATURED_PLOTS,
   PROPERTIES,
   SELLER_DRAFT_STORAGE_KEY,
+  affordableAlternatives,
   areaListingCount,
   areaMatchPercent,
+  budgetFeasibility,
   findSearchAreas,
   getSearchArea,
   fmt,
