@@ -550,9 +550,9 @@ export type BuyerProfile = {
 };
 
 export const DEFAULT_BUYER: BuyerProfile = {
-  budget: 600000,
+  budget: 0,
   areas: [],
-  familySize: 4,
+  familySize: 0,
   goal: "سكن",
   propertyType: "",
   minArea: 0,
@@ -566,9 +566,13 @@ export const DEFAULT_BUYER: BuyerProfile = {
 
 export function matchScore(p: Property, profile: BuyerProfile) {
   let score = 42;
-  const ratio = p.price / Math.max(profile.budget, 1);
-  if (ratio <= 1) score += 26 - Math.round(Math.abs(1 - ratio) * 10);
-  else score -= Math.min(30, Math.round((ratio - 1) * 40));
+  if (profile.budget > 0) {
+    const ratio = p.price / profile.budget;
+    if (ratio <= 1) score += 26 - Math.round(Math.abs(1 - ratio) * 10);
+    else score -= Math.min(30, Math.round((ratio - 1) * 40));
+  } else {
+    score += 10;
+  }
 
   if (profile.areas.length === 0 || profile.areas.some((a) => p.village.includes(a) || p.city.includes(a)))
     score += 12;
@@ -578,9 +582,10 @@ export function matchScore(p: Property, profile: BuyerProfile) {
   if (profile.goal === "تطوير") score += Math.round(p.area / 60) + (p.type === "أرض" ? 10 : 0);
 
   if (profile.familySize >= 5 && p.area >= 500) score += 6;
-  if (profile.familySize <= 3 && p.area <= 200) score += 5;
+  if (profile.familySize > 0 && profile.familySize <= 3 && p.area <= 200) score += 5;
   if (profile.propertyType && p.type === profile.propertyType) score += 10;
   if (profile.minArea > 0 && p.area >= profile.minArea) score += 7;
+  if (profile.minArea > 0 && p.area < profile.minArea) score -= 8;
   if (profile.rooms > 0 && p.features.some((feature) => feature.includes(`${profile.rooms} غرف`))) score += 5;
   if (profile.garden && p.features.some((feature) => feature.includes("حديقة"))) score += 4;
   if (profile.balcony && p.features.some((feature) => feature.includes("شرفة"))) score += 4;
@@ -593,7 +598,8 @@ export function matchScore(p: Property, profile: BuyerProfile) {
 
 export function matchReasons(p: Property, profile: BuyerProfile) {
   const out: string[] = [];
-  if (p.price <= profile.budget) out.push("داخل حدود ميزانيتك");
+  if (profile.budget <= 0) out.push("حدّد ميزانيتك لتقييم السعر بدقة");
+  else if (p.price <= profile.budget) out.push("داخل حدود ميزانيتك");
   else out.push(`أعلى من ميزانيتك بـ ${fmt(p.price - profile.budget)} د.أ`);
   if (profile.goal === "استثمار") out.push(`نمو سنوي متوقع ${p.growth}%`);
   if (profile.goal === "سكن") out.push(`مؤشر خدمات ${p.services}/100`);
@@ -605,6 +611,7 @@ export function matchReasons(p: Property, profile: BuyerProfile) {
   if (profile.minArea > 0 && p.area >= profile.minArea) out.push("يلبي الحد الأدنى للمساحة");
   return out.slice(0, 4);
 }
+
 
 export function smartPropertyScore(p: Property) {
   return Math.max(55, Math.min(97, Math.round(p.growth * 1.2 + p.liquidity * 0.38 + p.services * 0.42)));
@@ -626,7 +633,7 @@ export function recommendAreas(profile: BuyerProfile, text: string) {
 
   return AREA_RECOMMENDATIONS.filter((area) => !isWest || area.westAmman)
     .map((area) => {
-      const budgetFit = Math.max(0, 100 - Math.round(Math.max(0, area.avgPricePerM * 1000 - effectiveBudget) / 8000));
+      const budgetFit = effectiveBudget > 0 ? Math.max(0, 100 - Math.round(Math.max(0, area.avgPricePerM * 1000 - effectiveBudget) / 8000)) : 72;
       const goalScore = goal === "استثمار" ? area.roiScore : goal === "سكن" ? area.amenitiesScore : goal === "سياحة" ? area.tourismScore : Math.round((area.roiScore + area.amenitiesScore) / 2);
       const demandBoost = area.demand.includes("جداً") ? 8 : area.demand.includes("عالي") ? 5 : 2;
       return {
@@ -1024,7 +1031,7 @@ export function areaListingCount(name: string) {
 export function areaMatchPercent(name: string, profile: BuyerProfile) {
   const area = getSearchArea(name);
   if (!area) return 62;
-  const budgetFit = Math.max(0, 100 - Math.round(Math.max(0, area.avgPricePerM * 1000 - profile.budget) / 9000));
+  const budgetFit = profile.budget > 0 ? Math.max(0, 100 - Math.round(Math.max(0, area.avgPricePerM * 1000 - profile.budget) / 9000)) : 72;
   const goalScore =
     profile.goal === "استثمار" ? 62 + area.growth * 1.6 : profile.goal === "تطوير" ? 58 + area.growth * 1.4 : 52 + area.demandStars * 9;
   return Math.max(58, Math.min(98, Math.round(goalScore * 0.6 + budgetFit * 0.32 + area.demandStars * 2)));
@@ -1045,4 +1052,73 @@ export function nearbyAlternatives(name: string, profile: BuyerProfile) {
       };
     })
     .slice(0, 3);
+}
+
+/* ====================== كفاية الميزانية في منطقة محددة ====================== */
+
+export type BudgetCheck = {
+  areaName: string;
+  city: string;
+  avgPricePerM: number;
+  typicalArea: number;
+  entryPrice: number;
+  budget: number;
+  enough: boolean;
+  shortfall: number;
+  affordableArea: number;
+  message: string;
+};
+
+export function budgetFeasibility(name: string, profile: BuyerProfile): BudgetCheck | null {
+  const area = getSearchArea(name);
+  if (!area || profile.budget <= 0) return null;
+
+  const typicalArea =
+    profile.minArea > 0
+      ? profile.minArea
+      : profile.propertyType === "شقة"
+        ? 150
+        : profile.familySize >= 5
+          ? 600
+          : 500;
+
+  const entryPrice = Math.round(area.avgPricePerM * typicalArea);
+  const enough = profile.budget >= entryPrice;
+  const shortfall = Math.max(0, entryPrice - profile.budget);
+  const affordableArea = Math.floor(profile.budget / Math.max(area.avgPricePerM, 1));
+
+  const message = enough
+    ? `ميزانيتك ${fmt(profile.budget)} د.أ تكفي في ${area.name}: تشتري نحو ${fmt(affordableArea)}م² بسعر ${fmt(area.avgPricePerM)} د.أ/م².`
+    : `ميزانيتك ${fmt(profile.budget)} د.أ لا تكفي في ${area.name}. أقل سعر تقديري لـ ${fmt(typicalArea)}م² هو ${fmt(entryPrice)} د.أ (${fmt(area.avgPricePerM)} د.أ/م²)، أي ينقصك ${fmt(shortfall)} د.أ. بميزانيتك الحالية تحصل على نحو ${fmt(affordableArea)}م² فقط هنا.`;
+
+  return {
+    areaName: area.name,
+    city: area.city,
+    avgPricePerM: area.avgPricePerM,
+    typicalArea,
+    entryPrice,
+    budget: profile.budget,
+    enough,
+    shortfall,
+    affordableArea,
+    message,
+  };
+}
+
+export function affordableAlternatives(name: string, profile: BuyerProfile) {
+  const check = budgetFeasibility(name, profile);
+  if (!check || check.enough) return [];
+  const typicalArea = check.typicalArea;
+  return SEARCH_AREAS.filter((a) => a.name !== check.areaName && a.avgPricePerM * typicalArea <= profile.budget)
+    .sort((a, b) => b.avgPricePerM - a.avgPricePerM)
+    .slice(0, 3)
+    .map((a) => ({
+      name: a.name,
+      city: a.city,
+      avgPricePerM: a.avgPricePerM,
+      estimate: Math.round(a.avgPricePerM * typicalArea),
+      match: areaMatchPercent(a.name, profile),
+      count: areaListingCount(a.name),
+      why: a.note,
+    }));
 }

@@ -1,6 +1,6 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowUpLeft, BadgeCheck, Heart, MapPin, Mic, MicOff, Mountain, Ruler, Search, SearchX, Send, Share2, Sparkles, Volume2, VolumeX, X } from "lucide-react";
+import { AlertTriangle, ArrowUpLeft, BadgeCheck, Heart, MapPin, Mic, MicOff, Mountain, Ruler, Search, SearchX, Send, Share2, Sparkles, Volume2, VolumeX, Wallet, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { toast } from "sonner";
@@ -25,8 +25,10 @@ import {
   FEATURED_PLOTS,
   PROPERTIES,
   SELLER_DRAFT_STORAGE_KEY,
+  affordableAlternatives,
   areaListingCount,
   areaMatchPercent,
+  budgetFeasibility,
   findSearchAreas,
   getSearchArea,
   fmt,
@@ -243,6 +245,18 @@ function BuyerPortal() {
     [query],
   );
   const alternatives = useMemo(() => nearbyAlternatives(searchedArea, profile), [profile, searchedArea]);
+  const budgetCheck = useMemo(
+    () => (query.trim().length >= 2 ? budgetFeasibility(searchedArea, profile) : null),
+    [profile, query, searchedArea],
+  );
+  const affordableAreas = useMemo(
+    () => (budgetCheck && !budgetCheck.enough ? affordableAlternatives(searchedArea, profile) : []),
+    [budgetCheck, profile, searchedArea],
+  );
+  const setNum = (key: "budget" | "familySize" | "minArea" | "rooms", value: string) => {
+    const next = Math.max(0, Number(value.replace(/[^\d]/g, "")) || 0);
+    setProfile((pr) => ({ ...pr, [key]: next }));
+  };
 
   const toggleFav = (id: string) => {
     const wasFavorite = profile.favorites.includes(id);
@@ -290,10 +304,14 @@ function BuyerPortal() {
                 `قطعة ${p.name} ${p.plot} | أرض | ${p.areaText} | ${p.total} د.أ | ${p.pricePerM} د.أ/م² | Smart Score ${p.score} | ${p.zoning}`,
             ),
             `مناطق ذكية مقترحة الآن: ${recommendedAreas.map((a) => `${a.name} مطابقة ${a.match}% وسعر ${a.avgPricePerM} د.أ/م²`).join("؛ ")}`,
-          ].join("\n"),
-          profile: `الميزانية: ${profile.budget} د.أ | المناطق: ${
+            budgetCheck ? `تقييم كفاية الميزانية: ${budgetCheck.message}` : "",
+            affordableAreas.length
+              ? `مناطق داخل ميزانيته: ${affordableAreas.map((a) => `${a.name} بتقدير ${a.estimate} د.أ`).join("؛ ")}`
+              : "",
+          ].filter(Boolean).join("\n"),
+          profile: `الميزانية: ${profile.budget > 0 ? `${profile.budget} د.أ` : "غير محددة — اسأل الزبون عنها"} | المناطق: ${
             profile.areas.join("، ") || "غير محددة"
-          } | أفراد العائلة: ${profile.familySize} | الهدف: ${profile.goal} | النوع: ${profile.propertyType || "غير محدد"} | المساحة الدنيا: ${profile.minArea || "غير محددة"} | الغرف: ${profile.rooms || "غير محددة"} | المفضلة: ${
+          } | أفراد العائلة: ${profile.familySize || "غير محدد — اسأل الزبون"} | الهدف: ${profile.goal} | النوع: ${profile.propertyType || "غير محدد"} | المساحة المطلوبة: ${profile.minArea || "غير محددة"} | الغرف: ${profile.rooms || "غير محددة"} | المفضلة: ${
             profile.favorites.join("، ") || "لا شيء"
           }`,
         },
@@ -411,12 +429,132 @@ function BuyerPortal() {
             </div>
           </div>
 
+          <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
+            <p className="mb-3 flex items-center gap-2 text-sm font-black text-primary">
+              <Wallet className="size-4" /> بيانات البحث والمطابقة — حدّدها بنفسك
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <label className="space-y-1 text-xs text-muted-foreground">
+                الميزانية (د.أ)
+                <input
+                  inputMode="numeric"
+                  value={profile.budget ? String(profile.budget) : ""}
+                  onChange={(e) => setNum("budget", e.target.value)}
+                  placeholder="مثال: 250000"
+                  className="w-full rounded-xl border border-input bg-background/40 px-3 py-2.5 text-sm font-bold outline-none focus:border-primary/70"
+                />
+              </label>
+              <label className="space-y-1 text-xs text-muted-foreground">
+                عدد أفراد الأسرة
+                <input
+                  inputMode="numeric"
+                  value={profile.familySize ? String(profile.familySize) : ""}
+                  onChange={(e) => setNum("familySize", e.target.value)}
+                  placeholder="مثال: 5"
+                  className="w-full rounded-xl border border-input bg-background/40 px-3 py-2.5 text-sm font-bold outline-none focus:border-primary/70"
+                />
+              </label>
+              <label className="space-y-1 text-xs text-muted-foreground">
+                المساحة المطلوبة (م²)
+                <input
+                  inputMode="numeric"
+                  value={profile.minArea ? String(profile.minArea) : ""}
+                  onChange={(e) => setNum("minArea", e.target.value)}
+                  placeholder="مثال: 500"
+                  className="w-full rounded-xl border border-input bg-background/40 px-3 py-2.5 text-sm font-bold outline-none focus:border-primary/70"
+                />
+              </label>
+              <label className="space-y-1 text-xs text-muted-foreground">
+                عدد الغرف
+                <input
+                  inputMode="numeric"
+                  value={profile.rooms ? String(profile.rooms) : ""}
+                  onChange={(e) => setNum("rooms", e.target.value)}
+                  placeholder="مثال: 4"
+                  className="w-full rounded-xl border border-input bg-background/40 px-3 py-2.5 text-sm font-bold outline-none focus:border-primary/70"
+                />
+              </label>
+              <label className="space-y-1 text-xs text-muted-foreground">
+                نوع العقار
+                <select
+                  value={profile.propertyType}
+                  onChange={(e) => setProfile((pr) => ({ ...pr, propertyType: e.target.value as BuyerProfile["propertyType"] }))}
+                  className="w-full rounded-xl border border-input bg-background/40 px-3 py-2.5 text-sm font-bold outline-none focus:border-primary/70"
+                >
+                  <option value="">أي نوع</option>
+                  <option value="أرض">أرض</option>
+                  <option value="فيلا">فيلا</option>
+                  <option value="شقة">شقة</option>
+                  <option value="مزرعة">مزرعة</option>
+                </select>
+              </label>
+              <label className="space-y-1 text-xs text-muted-foreground">
+                الهدف
+                <select
+                  value={profile.goal}
+                  onChange={(e) => setProfile((pr) => ({ ...pr, goal: e.target.value as BuyerProfile["goal"] }))}
+                  className="w-full rounded-xl border border-input bg-background/40 px-3 py-2.5 text-sm font-bold outline-none focus:border-primary/70"
+                >
+                  <option value="سكن">سكن</option>
+                  <option value="استثمار">استثمار</option>
+                  <option value="تطوير">تطوير</option>
+                </select>
+              </label>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {(["garden", "balcony", "parking"] as const).map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setProfile((pr) => ({ ...pr, [key]: !pr[key] }))}
+                  className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${profile[key] ? "bg-secondary text-secondary-foreground" : "border border-border text-muted-foreground hover:bg-accent"}`}
+                >
+                  {key === "garden" ? "حديقة" : key === "balcony" ? "شرفة" : "موقف"}
+                </button>
+              ))}
+            </div>
+            <p className="mt-3 text-[11px] text-muted-foreground">
+              يمكنك أيضاً ذكر هذه البيانات صوتياً للمستشار وسيعبّئها تلقائياً. تُستخدم في البحث ودرجة المطابقة وتقييم كفاية الميزانية.
+            </p>
+          </div>
+
+          {budgetCheck ? (
+            <div
+              className={`rounded-xl border p-4 text-sm font-bold leading-relaxed ${
+                budgetCheck.enough
+                  ? "border-secondary/45 bg-secondary/12 text-secondary-foreground"
+                  : "border-primary/45 bg-primary/12 text-primary"
+              }`}
+            >
+              <p className="flex items-start gap-2">
+                {budgetCheck.enough ? <BadgeCheck className="mt-0.5 size-4 shrink-0" /> : <AlertTriangle className="mt-0.5 size-4 shrink-0" />}
+                {budgetCheck.message}
+              </p>
+              {affordableAreas.length ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span className="text-xs text-muted-foreground">مناطق داخل ميزانيتك:</span>
+                  {affordableAreas.map((alt) => (
+                    <Link
+                      key={alt.name}
+                      to="/area/$name"
+                      params={{ name: alt.name }}
+                      className="rounded-full border border-border bg-background/40 px-3 py-1 text-xs font-bold transition hover:border-primary/70"
+                    >
+                      {alt.name} · {fmt(alt.estimate)} د.أ تقديري
+                    </Link>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className="flex flex-wrap gap-2">
-            {[`ميزانية ${fmt(profile.budget)} د.أ`, profile.goal, profile.propertyType, profile.minArea ? `${profile.minArea}م² فأكثر` : "", profile.rooms ? `${profile.rooms} غرف` : "", profile.garden ? "حديقة" : "", profile.balcony ? "شرفة" : "", profile.parking ? "موقف" : "", ...profile.areas].filter(Boolean).map((value) => (
+            {[profile.budget ? `ميزانية ${fmt(profile.budget)} د.أ` : "", profile.goal, profile.propertyType, profile.familySize ? `${profile.familySize} أفراد` : "", profile.minArea ? `${profile.minArea}م² فأكثر` : "", profile.rooms ? `${profile.rooms} غرف` : "", profile.garden ? "حديقة" : "", profile.balcony ? "شرفة" : "", profile.parking ? "موقف" : "", ...profile.areas].filter(Boolean).map((value) => (
               <span key={String(value)} className="inline-flex items-center gap-1 rounded-full border border-primary/35 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary">{value}</span>
             ))}
             <button type="button" onClick={() => setProfile({ ...DEFAULT_BUYER, favorites: profile.favorites })} className="inline-flex items-center gap-1 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground"><X className="size-3" /> مسح التفضيلات</button>
           </div>
+
 
           <div className="flex flex-wrap gap-2">
             {recommendedAreas.map((area, index) => (
@@ -629,7 +767,7 @@ function PropertyCard({
   budget: number;
 }) {
   const smartScore = smartPropertyScore(p);
-  const budgetStatus = p.price <= budget ? "داخل ميزانيتك" : `أعلى من ميزانيتك بـ ${fmt(p.price - budget)} د.أ`;
+  const budgetStatus = budget <= 0 ? "حدّد ميزانيتك لمقارنة السعر" : p.price <= budget ? "داخل ميزانيتك" : `أعلى من ميزانيتك بـ ${fmt(p.price - budget)} د.أ`;
   return (
     <article className="glass fade-up overflow-hidden rounded-2xl transition-all duration-300 hover:-translate-y-1">
       <div className="relative">
@@ -661,7 +799,7 @@ function PropertyCard({
             <p className="mt-1 text-sm font-black text-primary">{fmt(p.price)} د.أ</p>
           </div>
         </div>
-        <p className={`rounded-xl px-3 py-2 text-xs font-black ${p.price <= budget ? "bg-secondary/20 text-secondary-foreground" : "bg-primary/12 text-primary"}`}>
+        <p className={`rounded-xl px-3 py-2 text-xs font-black ${budget > 0 && p.price <= budget ? "bg-secondary/20 text-secondary-foreground" : "bg-primary/12 text-primary"}`}>
           {budgetStatus}
         </p>
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-background/50">
