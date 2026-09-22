@@ -15,7 +15,9 @@ import {
   SiteHeader,
   Skeleton,
 } from "@/components/ui-kit";
+import { useSession } from "@/hooks/useSession";
 import { askAdvisor } from "@/lib/ai.functions";
+import { fetchFavorites, fetchPublishedProperties, isUuid, toggleFavorite, type DbProperty } from "@/lib/db";
 import { VoicePlayer, getRecognition } from "@/lib/speech";
 
 import {
@@ -151,6 +153,23 @@ function BuyerPortal() {
     }
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    void fetchPublishedProperties()
+      .then((rows) => active && setDbProperties(rows))
+      .catch(() => active && setDbProperties([]));
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    void fetchFavorites().then((ids) =>
+      setProfile((pr) => ({ ...pr, favorites: Array.from(new Set([...pr.favorites, ...ids])) })),
+    );
+  }, [user]);
+
   const conversationText = useMemo(
     () => `${query} ${input} ${messages.map((m) => m.text).join(" ")}`,
     [input, messages, query],
@@ -196,8 +215,8 @@ function BuyerPortal() {
     }));
   }, [conversationText, profile, query]);
   const allProperties = useMemo<Property[]>(
-    () => (sellerDraft ? [sellerDraft, ...PROPERTIES] : PROPERTIES),
-    [sellerDraft],
+    () => [...dbProperties, ...(sellerDraft ? [sellerDraft] : []), ...PROPERTIES],
+    [dbProperties, sellerDraft],
   );
 
   const ranked = useMemo(() => {
@@ -223,13 +242,21 @@ function BuyerPortal() {
   );
   const alternatives = useMemo(() => nearbyAlternatives(searchedArea, profile), [profile, searchedArea]);
 
-  const toggleFav = (id: string) =>
+  const toggleFav = (id: string) => {
+    const wasFavorite = profile.favorites.includes(id);
     setProfile((pr) => ({
       ...pr,
-      favorites: pr.favorites.includes(id)
-        ? pr.favorites.filter((f) => f !== id)
-        : [...pr.favorites, id],
+      favorites: wasFavorite ? pr.favorites.filter((f) => f !== id) : [...pr.favorites, id],
     }));
+    if (!isUuid(id)) return;
+    if (!user) {
+      toast.info("سجّل الدخول لحفظ المفضلة في حسابك");
+      return;
+    }
+    void toggleFavorite(id, wasFavorite).catch((favError) =>
+      toast.error(favError instanceof Error ? favError.message : "تعذر تحديث المفضلة"),
+    );
+  };
 
   const toggleArea = (a: string) =>
     setProfile((pr) => ({
