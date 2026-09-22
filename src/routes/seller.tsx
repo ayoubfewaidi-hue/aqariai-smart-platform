@@ -35,6 +35,8 @@ import {
   Stat,
 } from "@/components/ui-kit";
 import { supabase } from "@/integrations/supabase/client";
+import { useSession } from "@/hooks/useSession";
+import { createProperty, uploadImageDataUrls } from "@/lib/db";
 import { extractPlanData, generateMarketing, type MarketingPackage, type PlanData } from "@/lib/ai.functions";
 import { DEFAULT_REGULATORY_DATA, SELLER_DRAFT_STORAGE_KEY, fmt, type Property } from "@/lib/data";
 
@@ -183,6 +185,9 @@ function SellerPortal() {
   const [pkgError, setPkgError] = useState<string | null>(null);
   const [published, setPublished] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [publishedId, setPublishedId] = useState<string | null>(null);
+  const { user } = useSession();
   const [viewer, setViewer] = useState<PreviewFile | null>(null);
 
   const planInput = useRef<HTMLInputElement>(null);
@@ -1005,7 +1010,7 @@ function SellerPortal() {
               🎉 عقارك منشور الآن ويظهر للمشترين المطابقين مع درجة مطابقة محسوبة.
               <button
                 type="button"
-                onClick={() => void navigate({ to: "/property/$id", params: { id: "seller-draft" } })}
+                onClick={() => publishedId && void navigate({ to: "/property/$id", params: { id: publishedId } })}
                 className="ms-3 rounded-full border border-secondary-foreground/30 px-3 py-1 text-xs transition hover:bg-secondary"
               >
                 افتح صفحة التفاصيل
