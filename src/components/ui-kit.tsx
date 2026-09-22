@@ -1,7 +1,10 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
+import { supabase } from "@/integrations/supabase/client";
+import { useSession } from "@/hooks/useSession";
 import { cn } from "@/lib/utils";
 
 export function GlassCard({
@@ -222,5 +225,47 @@ export function SiteFooter() {
     <footer className="mt-16 border-t border-border/70 py-8 text-center text-xs text-muted-foreground">
       عقاري AI — منصة عقارية ذكية للسوق الأردني · {new Date().getFullYear()}
     </footer>
+  );
+}
+
+export function AuthNav() {
+  const { user, loading } = useSession();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  if (loading) return null;
+
+  if (!user) {
+    return (
+      <Link
+        to="/auth/login"
+        className="rounded-lg border border-primary/45 px-3 py-2 text-primary transition hover:bg-primary/10"
+        activeProps={{ className: "rounded-lg bg-primary/15 px-3 py-2 text-primary" }}
+      >
+        دخول
+      </Link>
+    );
+  }
+
+  async function signOut() {
+    await queryClient.cancelQueries();
+    queryClient.clear();
+    await supabase.auth.signOut();
+    void navigate({ to: "/auth/login", replace: true });
+  }
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="hidden max-w-[10rem] truncate rounded-lg bg-primary/12 px-3 py-2 text-xs font-bold text-primary sm:inline">
+        {(user.user_metadata?.["full_name"] as string) || user.email}
+      </span>
+      <button
+        type="button"
+        onClick={() => void signOut()}
+        className="rounded-lg border border-border px-3 py-2 text-xs font-bold text-muted-foreground transition hover:border-primary hover:text-primary"
+      >
+        خروج
+      </button>
+    </div>
   );
 }
