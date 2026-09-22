@@ -1053,3 +1053,72 @@ export function nearbyAlternatives(name: string, profile: BuyerProfile) {
     })
     .slice(0, 3);
 }
+
+/* ====================== كفاية الميزانية في منطقة محددة ====================== */
+
+export type BudgetCheck = {
+  areaName: string;
+  city: string;
+  avgPricePerM: number;
+  typicalArea: number;
+  entryPrice: number;
+  budget: number;
+  enough: boolean;
+  shortfall: number;
+  affordableArea: number;
+  message: string;
+};
+
+export function budgetFeasibility(name: string, profile: BuyerProfile): BudgetCheck | null {
+  const area = getSearchArea(name);
+  if (!area || profile.budget <= 0) return null;
+
+  const typicalArea =
+    profile.minArea > 0
+      ? profile.minArea
+      : profile.propertyType === "شقة"
+        ? 150
+        : profile.familySize >= 5
+          ? 600
+          : 500;
+
+  const entryPrice = Math.round(area.avgPricePerM * typicalArea);
+  const enough = profile.budget >= entryPrice;
+  const shortfall = Math.max(0, entryPrice - profile.budget);
+  const affordableArea = Math.floor(profile.budget / Math.max(area.avgPricePerM, 1));
+
+  const message = enough
+    ? `ميزانيتك ${fmt(profile.budget)} د.أ تكفي في ${area.name}: تشتري نحو ${fmt(affordableArea)}م² بسعر ${fmt(area.avgPricePerM)} د.أ/م².`
+    : `ميزانيتك ${fmt(profile.budget)} د.أ لا تكفي في ${area.name}. أقل سعر تقديري لـ ${fmt(typicalArea)}م² هو ${fmt(entryPrice)} د.أ (${fmt(area.avgPricePerM)} د.أ/م²)، أي ينقصك ${fmt(shortfall)} د.أ. بميزانيتك الحالية تحصل على نحو ${fmt(affordableArea)}م² فقط هنا.`;
+
+  return {
+    areaName: area.name,
+    city: area.city,
+    avgPricePerM: area.avgPricePerM,
+    typicalArea,
+    entryPrice,
+    budget: profile.budget,
+    enough,
+    shortfall,
+    affordableArea,
+    message,
+  };
+}
+
+export function affordableAlternatives(name: string, profile: BuyerProfile) {
+  const check = budgetFeasibility(name, profile);
+  if (!check || check.enough) return [];
+  const typicalArea = check.typicalArea;
+  return SEARCH_AREAS.filter((a) => a.name !== check.areaName && a.avgPricePerM * typicalArea <= profile.budget)
+    .sort((a, b) => b.avgPricePerM - a.avgPricePerM)
+    .slice(0, 3)
+    .map((a) => ({
+      name: a.name,
+      city: a.city,
+      avgPricePerM: a.avgPricePerM,
+      estimate: Math.round(a.avgPricePerM * typicalArea),
+      match: areaMatchPercent(a.name, profile),
+      count: areaListingCount(a.name),
+      why: a.note,
+    }));
+}
