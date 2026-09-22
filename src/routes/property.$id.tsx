@@ -18,6 +18,16 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { GlassCard, GoldButton, SiteFooter, SiteHeader, Stat } from "@/components/ui-kit";
+import { useSession } from "@/hooks/useSession";
+import {
+  createInquiry,
+  fetchFavorites,
+  fetchPropertyById,
+  isUuid,
+  registerView,
+  toggleFavorite,
+  type DbProperty,
+} from "@/lib/db";
 import {
   DEFAULT_REGULATORY_DATA,
   FEATURED_PLOTS,
@@ -35,8 +45,9 @@ export const Route = createFileRoute("/property/$id")({
     const plot = FEATURED_PLOTS.find((item) => item.id === params.id);
     const property = PROPERTIES.find((item) => item.id === params.id);
     const isSellerDraft = params.id === "seller-draft";
-    if (!plot && !property && !isSellerDraft) throw notFound();
-    return { plot, property, isSellerDraft };
+    const isDbProperty = isUuid(params.id);
+    if (!plot && !property && !isSellerDraft && !isDbProperty) throw notFound();
+    return { plot, property, isSellerDraft, isDbProperty, id: params.id };
   },
   head: ({ loaderData }) => {
     const plot = loaderData?.plot;
@@ -72,7 +83,7 @@ export const Route = createFileRoute("/property/$id")({
 });
 
 function PropertyDetail() {
-  const { plot, property, isSellerDraft } = Route.useLoaderData();
+  const { plot, property, isSellerDraft, isDbProperty, id } = Route.useLoaderData();
   const [draft, setDraft] = useState<SellerDraftProperty | null>(null);
 
   useEffect(() => {
@@ -85,6 +96,7 @@ function PropertyDetail() {
     }
   }, [isSellerDraft]);
 
+  if (isDbProperty) return <DbPropertyDetail id={id} />;
   if (plot) return <FeaturedPlotDetail plot={plot} />;
   if (property) return <LegacyPropertyDetail property={property} />;
   if (isSellerDraft && draft) return <LegacyPropertyDetail property={draft} regulatory={draft.regulatory} score={draft.score} />;
@@ -455,6 +467,121 @@ function DraftEmpty() {
         </GlassCard>
       </main>
       <SiteFooter />
+    </div>
+  );
+}
+function DbPropertyDetail({ id }: { id: string }) {
+  const { user } = useSession();
+  const [property, setProperty] = useState<DbProperty | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [fav, setFav] = useState(false);
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    void fetchPropertyById(id)
+      .then((row) => {
+        if (!active) return;
+        setProperty(row);
+        setLoading(false);
+      })
+      .catch(() => active && setLoading(false));
+    void registerView(id);
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  useEffect(() => {
+    if (!user) return;
+    void fetchFavorites().then((ids) => setFav(ids.includes(id)));
+  }, [id, user]);
+
+  async function onToggleFav() {
+    if (!user) return toast.error("سجّل الدخول لحفظ المفضلة");
+    try {
+      await toggleFavorite(id, fav);
+      setFav(!fav);
+    } catch (favError) {
+      toast.error(favError instanceof Error ? favError.message : "تعذر تحديث المفضلة");
+    }
+  }
+
+  async function sendInquiry() {
+    if (!user) return toast.error("سجّل الدخول لإرسال استفسار");
+    if (!message.trim()) return toast.error("اكتب نص الاستفسار");
+    setSending(true);
+    try {
+      await createInquiry(id, message.trim());
+      setMessage("");
+      toast.success("تم إرسال استفسارك للمالك");
+      const refreshed = await fetchPropertyById(id);
+      setProperty(refreshed);
+    } catch (inquiryError) {
+      toast.error(inquiryError instanceof Error ? inquiryError.message : "تعذر إرسال الاستفسار");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen">
+        <SiteHeader />
+        <main className="mx-auto max-w-5xl px-4 py-16 text-center text-sm text-muted-foreground">
+          جارٍ تحميل بيانات العقار…
+        </main>
+        <SiteFooter />
+      </div>
+    );
+  }
+
+  if (!property) {
+    return (
+      <div className="min-h-screen">
+        <SiteHeader />
+        <main className="mx-auto max-w-5xl px-4 py-16 text-center">
+          <p className="text-lg font-bold">هذا العقار غير متاح للعرض</p>
+          <Link to="/buyer" className="mt-4 inline-block text-sm font-bold text-primary hover:underline">
+            العودة إلى بوابة المشتري
+          </Link>
+        </main>
+        <SiteFooter />
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <LegacyPropertyDetail property={property} regulatory={property.regulatory} score={property.score} />
+      <div className="mx-auto -mt-12 max-w-5xl px-4 pb-14">
+        <GlassCard strong className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Stat label="عدد المشاهدات" value={fmt(property.views)} />
+            <Stat label="عدد الاستفسارات" value={fmt(property.inquiries)} />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <GoldButton variant={fav ? "emerald" : "outline"} onClick={() => void onToggleFav()}>
+              {fav ? "✓ في المفضلة" : "أضف إلى المفضلة"}
+            </GoldButton>
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-bold">أرسل استفساراً للمالك</p>
+            <textarea
+              value={message}
+              onChange={(event) => setMessage(event.target.value)}
+              rows={3}
+              placeholder="اكتب سؤالك عن العقار…"
+              className="w-full rounded-xl border border-input bg-background/40 px-3 py-2.5 text-sm outline-none transition focus:border-primary/70"
+            />
+            <GoldButton onClick={() => void sendInquiry()} loading={sending}>
+              <MessageCircle className="size-4" /> إرسال الاستفسار
+            </GoldButton>
+          </div>
+        </GlassCard>
+      </div>
     </div>
   );
 }
