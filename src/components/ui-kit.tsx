@@ -168,7 +168,7 @@ export function ErrorNote({ message }: { message: string }) {
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border/70 bg-[color-mix(in_oklab,var(--navy-deep)_82%,transparent)] backdrop-blur-xl">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-y-2 px-4 py-3 md:flex-nowrap md:py-3.5">
         <Link to="/" className="flex items-center gap-2">
           <span className="grid size-9 place-items-center rounded-xl bg-primary text-base font-black text-primary-foreground">
             ع
@@ -177,38 +177,38 @@ export function SiteHeader() {
             عقاري<span className="text-primary"> AI</span>
           </span>
         </Link>
-        <nav className="flex items-center gap-1.5 text-sm font-semibold">
+        <nav className="order-3 -mx-1 flex w-full min-w-0 items-center gap-1 overflow-x-auto whitespace-nowrap px-1 text-sm font-semibold [scrollbar-width:none] md:order-none md:mx-0 md:w-auto md:gap-1.5 md:overflow-visible md:px-0">
           <Link
             to="/buyer"
-            className="rounded-lg px-3 py-2 text-muted-foreground transition hover:bg-accent hover:text-foreground"
+            className="shrink-0 rounded-lg px-2.5 py-2 md:px-3 text-muted-foreground transition hover:bg-accent hover:text-foreground"
             activeProps={{ className: "rounded-lg px-3 py-2 bg-primary/15 text-primary" }}
           >
             مشتري
           </Link>
           <Link
             to="/seller"
-            className="rounded-lg px-3 py-2 text-muted-foreground transition hover:bg-accent hover:text-foreground"
+            className="shrink-0 rounded-lg px-2.5 py-2 md:px-3 text-muted-foreground transition hover:bg-accent hover:text-foreground"
             activeProps={{ className: "rounded-lg px-3 py-2 bg-primary/15 text-primary" }}
           >
             بائع
           </Link>
           <Link
             to="/pricing"
-            className="rounded-lg px-3 py-2 text-muted-foreground transition hover:bg-accent hover:text-foreground"
+            className="shrink-0 rounded-lg px-2.5 py-2 md:px-3 text-muted-foreground transition hover:bg-accent hover:text-foreground"
             activeProps={{ className: "rounded-lg px-3 py-2 bg-primary/15 text-primary" }}
           >
             الأسعار
           </Link>
           <Link
             to="/about"
-            className="rounded-lg px-3 py-2 text-muted-foreground transition hover:bg-accent hover:text-foreground"
+            className="shrink-0 rounded-lg px-2.5 py-2 md:px-3 text-muted-foreground transition hover:bg-accent hover:text-foreground"
             activeProps={{ className: "rounded-lg px-3 py-2 bg-primary/15 text-primary" }}
           >
             من نحن
           </Link>
           <Link
             to="/contact"
-            className="rounded-lg px-3 py-2 text-muted-foreground transition hover:bg-accent hover:text-foreground"
+            className="shrink-0 rounded-lg px-2.5 py-2 md:px-3 text-muted-foreground transition hover:bg-accent hover:text-foreground"
             activeProps={{ className: "rounded-lg px-3 py-2 bg-primary/15 text-primary" }}
           >
             تواصل
