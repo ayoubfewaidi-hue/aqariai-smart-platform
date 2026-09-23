@@ -757,12 +757,12 @@ function ReturnCalculator({
             />
             <Stat
               label="العائد السنوي"
-              value={`${result.yieldPct.toFixed(2)}%`}
+              value={`${fmtDec(result.yieldPct, 2)}%`}
               hint={`إيجار ${fmt(Math.round(result.rent))} د.أ شهرياً`}
             />
             <Stat
               label="سنوات الاسترداد"
-              value={`${result.paybackYears.toFixed(1)} سنة`}
+              value={`${fmtDec(result.paybackYears, 1)} سنة`}
               hint="بدون تضخم أو مصروفات تشغيل"
             />
           </div>
