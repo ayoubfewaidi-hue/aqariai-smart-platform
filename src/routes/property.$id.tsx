@@ -203,6 +203,13 @@ function FeaturedPlotDetail({ plot }: { plot: (typeof FEATURED_PLOTS)[number] })
           </GlassCard>
         </section>
 
+        <ReturnCalculator
+          price={plot.total}
+          areaM2={plot.area}
+          areaName={plot.name}
+          avgPricePerM={plot.marketAverage}
+        />
+
         <GlassCard className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="space-y-2">
