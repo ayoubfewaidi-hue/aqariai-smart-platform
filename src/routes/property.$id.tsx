@@ -35,6 +35,7 @@ import {
   PROPERTIES,
   SELLER_DRAFT_STORAGE_KEY,
   analyze,
+  findSearchAreas,
   fmt,
   type Property,
   type RegulatoryData,
