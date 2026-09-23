@@ -9,6 +9,7 @@ import {
   Map,
   MapPin,
   MessageCircle,
+  Percent,
   Radar,
   RotateCcw,
   TrendingDown,
@@ -34,6 +35,7 @@ import {
   PROPERTIES,
   SELLER_DRAFT_STORAGE_KEY,
   analyze,
+  findSearchAreas,
   fmt,
   type Property,
   type RegulatoryData,
@@ -200,6 +202,13 @@ function FeaturedPlotDetail({ plot }: { plot: (typeof FEATURED_PLOTS)[number] })
             </div>
           </GlassCard>
         </section>
+
+        <ReturnCalculator
+          price={plot.total}
+          areaM2={plot.area}
+          areaName={plot.name}
+          avgPricePerM={plot.marketAverage}
+        />
 
         <GlassCard className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -383,6 +392,12 @@ function LegacyPropertyDetail({
           <Stat label="مستوى المخاطرة" value={a.risk} hint={`سيولة ${p.liquidity}/100`} />
           <Stat label="المدة المتوقعة للبيع" value={a.timeToSell} />
         </section>
+        <ReturnCalculator
+          price={p.price}
+          areaM2={p.area}
+          areaName={p.village}
+          avgPricePerM={areaAverage(p.village, p.pricePerM)}
+        />
         {regulatory ? (
           <GlassCard className="fade-up space-y-4">
             <SourceBadge label="أمانة عمان الكبرى" icon={<Layers3 className="size-3.5" />} />
@@ -583,5 +598,197 @@ function DbPropertyDetail({ id }: { id: string }) {
         </GlassCard>
       </div>
     </div>
+  );
+}
+
+/* ====================== حاسبة العائد — صفحة تفاصيل العقار فقط ====================== */
+
+type CalcResult = {
+  price: number;
+  rent: number;
+  budget: number;
+  registration: number;
+  brokerage: number;
+  totalCost: number;
+  yieldPct: number;
+  paybackYears: number;
+};
+
+const CALC_TONES = {
+  green: "border-secondary/50 bg-secondary/15 text-secondary-foreground",
+  amber: "border-primary/45 bg-primary/12 text-primary",
+  red: "border-destructive/50 bg-destructive/12 text-destructive-foreground",
+} as const;
+
+const CALC_LABELS = {
+  green: "عائد ممتاز — أعلى من 7%",
+  amber: "عائد مقبول — بين 5% و7%",
+  red: "عائد ضعيف — أقل من 5%",
+} as const;
+
+const CALC_NOTES = {
+  green: "العقار يدرّ دخلاً أعلى من البدائل الآمنة بوضوح؛ التوقيت مناسب للدخول.",
+  amber: "العائد قريب من متوسط السوق؛ جرّب التفاوض على السعر لرفعه فوق 7%.",
+  red: "العائد لا يغطي كلفة رأس المال؛ يحتاج إعادة تسعير أو تغيير الاستخدام.",
+} as const;
+
+function areaAverage(name: string, fallback: number) {
+  const match = findSearchAreas(name, 1)[0];
+  return match && match.avgPricePerM > 0 ? match.avgPricePerM : fallback;
+}
+
+function fmtDec(n: number, digits: number) {
+  return new Intl.NumberFormat("ar-JO", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(n);
+}
+
+function ReturnCalculator({
+  price,
+  areaM2,
+  areaName,
+  avgPricePerM,
+}: {
+  price: number;
+  areaM2: number;
+  areaName: string;
+  avgPricePerM: number;
+}) {
+  const defaultRent = useMemo(() => {
+    const basis = Math.max(avgPricePerM, 1) * Math.max(areaM2, 1);
+    return Math.max(25, Math.round((basis * 0.06) / 12 / 25) * 25);
+  }, [avgPricePerM, areaM2]);
+
+  const [budget, setBudget] = useState("");
+  const [rent, setRent] = useState(String(defaultRent));
+  const [rentEdited, setRentEdited] = useState(false);
+  const [result, setResult] = useState<CalcResult | null>(null);
+
+  useEffect(() => {
+    if (!rentEdited) setRent(String(defaultRent));
+  }, [defaultRent, rentEdited]);
+
+  function calculate() {
+    const rentValue = Number(rent);
+    if (!Number.isFinite(rentValue) || rentValue <= 0) {
+      toast.error("أدخل إيجاراً شهرياً صحيحاً أكبر من صفر");
+      return;
+    }
+    const hasBudget = budget.trim().length > 0;
+    const budgetValue = hasBudget ? Number(budget) : 0;
+    if (hasBudget && (!Number.isFinite(budgetValue) || budgetValue < 0)) {
+      toast.error("أدخل ميزانية صحيحة");
+      return;
+    }
+    const registration = price * 0.05;
+    const brokerage = price * 0.02;
+    const totalCost = price + registration + brokerage;
+    setResult({
+      price,
+      rent: rentValue,
+      budget: budgetValue,
+      registration,
+      brokerage,
+      totalCost,
+      yieldPct: ((rentValue * 12) / totalCost) * 100,
+      paybackYears: totalCost / (rentValue * 12),
+    });
+  }
+
+  const grade = !result ? null : result.yieldPct > 7 ? "green" : result.yieldPct >= 5 ? "amber" : "red";
+
+  return (
+    <GlassCard className="fade-up space-y-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-2">
+          <SourceBadge label="حاسبة العائد" icon={<Percent className="size-3.5" />} />
+          <h2 className="text-xl font-black">احسب مردود هذا العقار</h2>
+        </div>
+        <p className="text-[11px] text-muted-foreground">
+          متوسط {areaName}: {fmt(Math.round(avgPricePerM))} د.أ/م²
+        </p>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block space-y-1.5">
+          <span className="text-xs font-semibold text-muted-foreground">ميزانيتك (د.أ)</span>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            value={budget}
+            onChange={(event) => setBudget(event.target.value)}
+            placeholder="مثال: 70000"
+            className="w-full rounded-xl border border-input bg-background/40 px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary/70 focus:ring-2 focus:ring-primary/25"
+          />
+        </label>
+        <label className="block space-y-1.5">
+          <span className="text-xs font-semibold text-muted-foreground">الإيجار الشهري المتوقع (د.أ)</span>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            value={rent}
+            onChange={(event) => {
+              setRent(event.target.value);
+              setRentEdited(true);
+            }}
+            placeholder="مثال: 350"
+            className="w-full rounded-xl border border-input bg-background/40 px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary/70 focus:ring-2 focus:ring-primary/25"
+          />
+          <span className="block text-[11px] text-muted-foreground">
+            الافتراضي من متوسط المنطقة: عائد إيجاري 6% سنوياً على {fmt(Math.round(Math.max(avgPricePerM, 1) * Math.max(areaM2, 1)))} د.أ.
+          </span>
+        </label>
+      </div>
+
+      <GoldButton className="w-full sm:w-auto" onClick={calculate}>
+        <Percent className="size-4" /> احسب
+      </GoldButton>
+
+      {result && grade ? (
+        <div className="fade-up space-y-3">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Stat
+              label="التكلفة الإجمالية"
+              value={`${fmt(Math.round(result.totalCost))} د.أ`}
+              hint={`السعر ${fmt(Math.round(result.price))} + تسجيل 5% ${fmt(Math.round(result.registration))} + وساطة 2% ${fmt(Math.round(result.brokerage))}`}
+            />
+            <Stat
+              label="العائد السنوي"
+              value={`${fmtDec(result.yieldPct, 2)}%`}
+              hint={`إيجار ${fmt(Math.round(result.rent))} د.أ شهرياً`}
+            />
+            <Stat
+              label="سنوات الاسترداد"
+              value={`${fmtDec(result.paybackYears, 1)} سنة`}
+              hint="بدون تضخم أو مصروفات تشغيل"
+            />
+          </div>
+          <div className={`rounded-xl border px-4 py-3 ${CALC_TONES[grade]}`}>
+            <p className="text-sm font-black">{CALC_LABELS[grade]}</p>
+            <p className="mt-0.5 text-xs opacity-90">{CALC_NOTES[grade]}</p>
+          </div>
+          {result.budget > 0 ? (
+            <p
+              className={`rounded-xl border px-4 py-3 text-sm font-semibold ${
+                result.budget >= result.totalCost
+                  ? "border-secondary/50 bg-secondary/15 text-secondary-foreground"
+                  : "border-destructive/50 bg-destructive/12 text-destructive-foreground"
+              }`}
+            >
+              {result.budget >= result.totalCost
+                ? `ميزانيتك ${fmt(Math.round(result.budget))} د.أ تغطي التكلفة ويتبقى لديك ${fmt(Math.round(result.budget - result.totalCost))} د.أ.`
+                : `ميزانيتك ${fmt(Math.round(result.budget))} د.أ لا تغطي التكلفة — ينقصك ${fmt(Math.round(result.totalCost - result.budget))} د.أ.`}
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          أدخل ميزانيتك والإيجار المتوقع ثم اضغط «احسب» لعرض التكلفة الإجمالية والعائد السنوي وتصنيف الاستثمار.
+        </p>
+      )}
+    </GlassCard>
   );
 }
