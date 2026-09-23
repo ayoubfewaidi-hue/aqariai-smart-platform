@@ -9,6 +9,7 @@ import {
   Map,
   MapPin,
   MessageCircle,
+  Percent,
   Radar,
   RotateCcw,
   TrendingDown,
