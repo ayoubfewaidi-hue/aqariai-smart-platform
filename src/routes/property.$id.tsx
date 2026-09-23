@@ -392,6 +392,12 @@ function LegacyPropertyDetail({
           <Stat label="مستوى المخاطرة" value={a.risk} hint={`سيولة ${p.liquidity}/100`} />
           <Stat label="المدة المتوقعة للبيع" value={a.timeToSell} />
         </section>
+        <ReturnCalculator
+          price={p.price}
+          areaM2={p.area}
+          areaName={p.village}
+          avgPricePerM={areaAverage(p.village, p.pricePerM)}
+        />
         {regulatory ? (
           <GlassCard className="fade-up space-y-4">
             <SourceBadge label="أمانة عمان الكبرى" icon={<Layers3 className="size-3.5" />} />
