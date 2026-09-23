@@ -637,6 +637,13 @@ function areaAverage(name: string, fallback: number) {
   return match && match.avgPricePerM > 0 ? match.avgPricePerM : fallback;
 }
 
+function fmtDec(n: number, digits: number) {
+  return new Intl.NumberFormat("ar-JO", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(n);
+}
+
 function ReturnCalculator({
   price,
   areaM2,
