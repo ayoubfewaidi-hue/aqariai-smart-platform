@@ -612,6 +612,8 @@ type CalcResult = {
   totalCost: number;
   yieldPct: number;
   paybackYears: number;
+  insufficient: boolean;
+  shortage: number;
 };
 
 const CALC_TONES = {
@@ -684,6 +686,21 @@ function ReturnCalculator({
     const registration = price * 0.05;
     const brokerage = price * 0.02;
     const totalCost = price + registration + brokerage;
+    if (hasBudget && budgetValue < totalCost) {
+      setResult({
+        price,
+        rent: rentValue,
+        budget: budgetValue,
+        registration,
+        brokerage,
+        totalCost,
+        yieldPct: 0,
+        paybackYears: 0,
+        insufficient: true,
+        shortage: totalCost - budgetValue,
+      });
+      return;
+    }
     setResult({
       price,
       rent: rentValue,
@@ -693,10 +710,12 @@ function ReturnCalculator({
       totalCost,
       yieldPct: ((rentValue * 12) / totalCost) * 100,
       paybackYears: totalCost / (rentValue * 12),
+      insufficient: false,
+      shortage: 0,
     });
   }
 
-  const grade = !result ? null : result.yieldPct > 7 ? "green" : result.yieldPct >= 5 ? "amber" : "red";
+  const grade = !result || result.insufficient ? null : result.yieldPct > 7 ? "green" : result.yieldPct >= 5 ? "amber" : "red";
 
   return (
     <GlassCard className="fade-up space-y-4">
@@ -783,6 +802,24 @@ function ReturnCalculator({
                 : `ميزانيتك ${fmt(Math.round(result.budget))} د.أ لا تغطي التكلفة — ينقصك ${fmt(Math.round(result.totalCost - result.budget))} د.أ.`}
             </p>
           ) : null}
+        </div>
+      ) : result?.insufficient ? (
+        <div className="fade-up space-y-3">
+          <div className="rounded-xl border border-destructive/50 bg-destructive/12 px-4 py-3 text-destructive-foreground">
+            <p className="text-sm font-black">
+              ميزانيتك لا تكفي. ينقصك {fmt(Math.round(result.shortage))} د.أ
+            </p>
+            <p className="mt-0.5 text-xs opacity-90">
+              التكلفة الإجمالية {fmt(Math.round(result.totalCost))} د.أ (السعر + تسجيل 5% + وساطة 2%) أعلى من ميزانيتك{" "}
+              {fmt(Math.round(result.budget))} د.أ.
+            </p>
+          </div>
+          <Link
+            to="/buyer"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-primary/45 bg-primary/12 px-4 py-3 text-sm font-black text-primary transition hover:bg-primary/20 sm:w-auto"
+          >
+            <Radar className="size-4" /> استخدم بوابة المشتري للبحث ضمن ميزانيتك
+          </Link>
         </div>
       ) : (
         <p className="text-xs text-muted-foreground">
