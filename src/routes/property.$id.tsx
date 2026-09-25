@@ -612,6 +612,8 @@ type CalcResult = {
   totalCost: number;
   yieldPct: number;
   paybackYears: number;
+  insufficient: boolean;
+  shortage: number;
 };
 
 const CALC_TONES = {
@@ -684,6 +686,21 @@ function ReturnCalculator({
     const registration = price * 0.05;
     const brokerage = price * 0.02;
     const totalCost = price + registration + brokerage;
+    if (hasBudget && budgetValue < totalCost) {
+      setResult({
+        price,
+        rent: rentValue,
+        budget: budgetValue,
+        registration,
+        brokerage,
+        totalCost,
+        yieldPct: 0,
+        paybackYears: 0,
+        insufficient: true,
+        shortage: totalCost - budgetValue,
+      });
+      return;
+    }
     setResult({
       price,
       rent: rentValue,
@@ -693,10 +710,12 @@ function ReturnCalculator({
       totalCost,
       yieldPct: ((rentValue * 12) / totalCost) * 100,
       paybackYears: totalCost / (rentValue * 12),
+      insufficient: false,
+      shortage: 0,
     });
   }
 
-  const grade = !result ? null : result.yieldPct > 7 ? "green" : result.yieldPct >= 5 ? "amber" : "red";
+  const grade = !result || result.insufficient ? null : result.yieldPct > 7 ? "green" : result.yieldPct >= 5 ? "amber" : "red";
 
   return (
     <GlassCard className="fade-up space-y-4">
