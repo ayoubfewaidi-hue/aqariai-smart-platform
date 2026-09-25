@@ -803,6 +803,24 @@ function ReturnCalculator({
             </p>
           ) : null}
         </div>
+      ) : result?.insufficient ? (
+        <div className="fade-up space-y-3">
+          <div className="rounded-xl border border-destructive/50 bg-destructive/12 px-4 py-3 text-destructive-foreground">
+            <p className="text-sm font-black">
+              ميزانيتك لا تكفي. ينقصك {fmt(Math.round(result.shortage))} د.أ
+            </p>
+            <p className="mt-0.5 text-xs opacity-90">
+              التكلفة الإجمالية {fmt(Math.round(result.totalCost))} د.أ (السعر + تسجيل 5% + وساطة 2%) أعلى من ميزانيتك{" "}
+              {fmt(Math.round(result.budget))} د.أ.
+            </p>
+          </div>
+          <Link
+            to="/buyer"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border border-primary/45 bg-primary/12 px-4 py-3 text-sm font-black text-primary transition hover:bg-primary/20 sm:w-auto"
+          >
+            <Radar className="size-4" /> استخدم بوابة المشتري للبحث ضمن ميزانيتك
+          </Link>
+        </div>
       ) : (
         <p className="text-xs text-muted-foreground">
           أدخل ميزانيتك والإيجار المتوقع ثم اضغط «احسب» لعرض التكلفة الإجمالية والعائد السنوي وتصنيف الاستثمار.
