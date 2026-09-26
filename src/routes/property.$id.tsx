@@ -208,7 +208,7 @@ function FeaturedPlotDetail({ plot }: { plot: (typeof FEATURED_PLOTS)[number] })
           areaM2={plot.area}
           areaName={plot.name}
           avgPricePerM={plot.marketAverage}
-          propertyKind={plot.type}
+          propertyKind="أرض"
         />
 
         <GlassCard className="space-y-4">
