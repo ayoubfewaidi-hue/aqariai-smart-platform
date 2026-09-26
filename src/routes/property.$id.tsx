@@ -208,6 +208,7 @@ function FeaturedPlotDetail({ plot }: { plot: (typeof FEATURED_PLOTS)[number] })
           areaM2={plot.area}
           areaName={plot.name}
           avgPricePerM={plot.marketAverage}
+          propertyKind="أرض"
         />
 
         <GlassCard className="space-y-4">
@@ -397,6 +398,7 @@ function LegacyPropertyDetail({
           areaM2={p.area}
           areaName={p.village}
           avgPricePerM={areaAverage(p.village, p.pricePerM)}
+          propertyKind={p.type}
         />
         {regulatory ? (
           <GlassCard className="fade-up space-y-4">
@@ -646,30 +648,93 @@ function fmtDec(n: number, digits: number) {
   }).format(n);
 }
 
+type LandResult = {
+  area: number;
+  pricePerM: number;
+  buildRatio: number;
+  currentValue: number;
+  buildable: number;
+  futureValue: number;
+  profit: number;
+  marginPct: number;
+};
+
+const LAND_TONES = {
+  green: "border-secondary/50 bg-secondary/15 text-secondary-foreground",
+  amber: "border-primary/45 bg-primary/12 text-primary",
+  red: "border-destructive/50 bg-destructive/12 text-destructive-foreground",
+} as const;
+
+const LAND_LABELS = {
+  green: "فرصة قوية — هامش أعلى من 30%",
+  amber: "فرصة جيدة — هامش بين 20% و30%",
+  red: "فرصة ضعيفة — هامش أقل من 20%",
+} as const;
+
+const LAND_NOTES = {
+  green: "القيمة المتوقعة بعد التطوير تفوق القيمة الحالية بهامش مريح؛ فرصة دخول مبكر منطقية.",
+  amber: "الهامش جيد لكنه حساس لتكاليف البناء والرسوم؛ تفاوض على سعر المتر لتحسينه.",
+  red: "الهامش ضعيف أمام كلفة التطوير والمخاطر؛ راجع سعر المتر أو توقعات البيع.",
+} as const;
+
+const CALC_KINDS = [
+  { id: "apartment", label: "🏠 شقة" },
+  { id: "villa", label: "🏡 فيلا/بيت" },
+  { id: "land", label: "🏗️ أرض" },
+  { id: "commercial", label: "🏢 تجاري" },
+] as const;
+type CalcKind = (typeof CALC_KINDS)[number]["id"];
+
+function detectCalcKind(raw?: string): CalcKind {
+  if (!raw) return "apartment";
+  if (raw.includes("أرض")) return "land";
+  if (raw.includes("فيلا") || raw.includes("بيت")) return "villa";
+  if (raw.includes("شقة")) return "apartment";
+  if (raw.includes("مشروع") || raw.includes("تجاري")) return "commercial";
+  return "apartment";
+}
+
 function ReturnCalculator({
   price,
   areaM2,
   areaName,
   avgPricePerM,
+  propertyKind,
 }: {
   price: number;
   areaM2: number;
   areaName: string;
   avgPricePerM: number;
+  propertyKind?: string;
 }) {
+  const inputCls =
+    "w-full rounded-xl border border-input bg-background/40 px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary/70 focus:ring-2 focus:ring-primary/25";
+
   const defaultRent = useMemo(() => {
     const basis = Math.max(avgPricePerM, 1) * Math.max(areaM2, 1);
     return Math.max(25, Math.round((basis * 0.06) / 12 / 25) * 25);
   }, [avgPricePerM, areaM2]);
 
+  const [kind, setKindState] = useState<CalcKind>(() => detectCalcKind(propertyKind));
   const [budget, setBudget] = useState("");
   const [rent, setRent] = useState(String(defaultRent));
   const [rentEdited, setRentEdited] = useState(false);
   const [result, setResult] = useState<CalcResult | null>(null);
 
+  const [landArea, setLandArea] = useState(String(Math.round(areaM2)));
+  const [landPricePerM, setLandPricePerM] = useState(String(Math.round(avgPricePerM)));
+  const [buildRatio, setBuildRatio] = useState("40");
+  const [landResult, setLandResult] = useState<LandResult | null>(null);
+
   useEffect(() => {
     if (!rentEdited) setRent(String(defaultRent));
   }, [defaultRent, rentEdited]);
+
+  function setKind(next: CalcKind) {
+    setKindState(next);
+    setResult(null);
+    setLandResult(null);
+  }
 
   function calculate() {
     const rentValue = Number(rent);
@@ -715,7 +780,41 @@ function ReturnCalculator({
     });
   }
 
+  function calculateLand() {
+    const areaValue = Number(landArea);
+    const ppmValue = Number(landPricePerM);
+    const ratio = buildRatio.trim() === "" ? 40 : Number(buildRatio);
+    if (!Number.isFinite(areaValue) || areaValue <= 0) {
+      toast.error("أدخل مساحة صحيحة أكبر من صفر");
+      return;
+    }
+    if (!Number.isFinite(ppmValue) || ppmValue <= 0) {
+      toast.error("أدخل سعر متر صحيحاً أكبر من صفر");
+      return;
+    }
+    if (!Number.isFinite(ratio) || ratio <= 0 || ratio > 100) {
+      toast.error("أدخل نسبة بناء صحيحة بين 0 و100");
+      return;
+    }
+    const currentValue = areaValue * ppmValue;
+    const buildable = areaValue * (ratio / 100);
+    const futureValue = currentValue * 1.35;
+    const profit = futureValue - currentValue;
+    const marginPct = (profit / currentValue) * 100;
+    setLandResult({
+      area: areaValue,
+      pricePerM: ppmValue,
+      buildRatio: ratio,
+      currentValue,
+      buildable,
+      futureValue,
+      profit,
+      marginPct,
+    });
+  }
+
   const grade = !result || result.insufficient ? null : result.yieldPct > 7 ? "green" : result.yieldPct >= 5 ? "amber" : "red";
+  const landGrade = landResult ? (landResult.marginPct > 30 ? "green" : landResult.marginPct >= 20 ? "amber" : "red") : null;
 
   return (
     <GlassCard className="fade-up space-y-4">
@@ -729,102 +828,206 @@ function ReturnCalculator({
         </p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="block space-y-1.5">
-          <span className="text-xs font-semibold text-muted-foreground">ميزانيتك (د.أ)</span>
-          <input
-            type="number"
-            inputMode="numeric"
-            min={0}
-            value={budget}
-            onChange={(event) => setBudget(event.target.value)}
-            placeholder="مثال: 70000"
-            className="w-full rounded-xl border border-input bg-background/40 px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary/70 focus:ring-2 focus:ring-primary/25"
-          />
-        </label>
-        <label className="block space-y-1.5">
-          <span className="text-xs font-semibold text-muted-foreground">الإيجار الشهري المتوقع (د.أ)</span>
-          <input
-            type="number"
-            inputMode="numeric"
-            min={0}
-            value={rent}
-            onChange={(event) => {
-              setRent(event.target.value);
-              setRentEdited(true);
-            }}
-            placeholder="مثال: 350"
-            className="w-full rounded-xl border border-input bg-background/40 px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-primary/70 focus:ring-2 focus:ring-primary/25"
-          />
-          <span className="block text-[11px] text-muted-foreground">
-            الافتراضي من متوسط المنطقة: عائد إيجاري 6% سنوياً على {fmt(Math.round(Math.max(avgPricePerM, 1) * Math.max(areaM2, 1)))} د.أ.
-          </span>
-        </label>
-      </div>
-
-      <GoldButton className="w-full sm:w-auto" onClick={calculate}>
-        <Percent className="size-4" /> احسب
-      </GoldButton>
-
-      {result && grade ? (
-        <div className="fade-up space-y-3">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Stat
-              label="التكلفة الإجمالية"
-              value={`${fmt(Math.round(result.totalCost))} د.أ`}
-              hint={`السعر ${fmt(Math.round(result.price))} + تسجيل 5% ${fmt(Math.round(result.registration))} + وساطة 2% ${fmt(Math.round(result.brokerage))}`}
-            />
-            <Stat
-              label="العائد السنوي"
-              value={`${fmtDec(result.yieldPct, 2)}%`}
-              hint={`إيجار ${fmt(Math.round(result.rent))} د.أ شهرياً`}
-            />
-            <Stat
-              label="سنوات الاسترداد"
-              value={`${fmtDec(result.paybackYears, 1)} سنة`}
-              hint="بدون تضخم أو مصروفات تشغيل"
-            />
-          </div>
-          <div className={`rounded-xl border px-4 py-3 ${CALC_TONES[grade]}`}>
-            <p className="text-sm font-black">{CALC_LABELS[grade]}</p>
-            <p className="mt-0.5 text-xs opacity-90">{CALC_NOTES[grade]}</p>
-          </div>
-          {result.budget > 0 ? (
-            <p
-              className={`rounded-xl border px-4 py-3 text-sm font-semibold ${
-                result.budget >= result.totalCost
-                  ? "border-secondary/50 bg-secondary/15 text-secondary-foreground"
-                  : "border-destructive/50 bg-destructive/12 text-destructive-foreground"
+      <div className="space-y-1.5">
+        <span className="text-xs font-semibold text-muted-foreground">نوع العقار</span>
+        <div className="flex flex-wrap gap-2">
+          {CALC_KINDS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setKind(item.id)}
+              className={`rounded-xl px-3.5 py-2 text-xs font-bold transition-all duration-300 active:scale-[0.98] ${
+                kind === item.id
+                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                  : "border border-primary/45 text-primary hover:bg-primary/10"
               }`}
             >
-              {result.budget >= result.totalCost
-                ? `ميزانيتك ${fmt(Math.round(result.budget))} د.أ تغطي التكلفة ويتبقى لديك ${fmt(Math.round(result.budget - result.totalCost))} د.أ.`
-                : `ميزانيتك ${fmt(Math.round(result.budget))} د.أ لا تغطي التكلفة — ينقصك ${fmt(Math.round(result.totalCost - result.budget))} د.أ.`}
-            </p>
-          ) : null}
+              {item.label}
+            </button>
+          ))}
         </div>
-      ) : result?.insufficient ? (
-        <div className="fade-up space-y-3">
-          <div className="rounded-xl border border-destructive/50 bg-destructive/12 px-4 py-3 text-destructive-foreground">
-            <p className="text-sm font-black">
-              ميزانيتك لا تكفي. ينقصك {fmt(Math.round(result.shortage))} د.أ
-            </p>
-            <p className="mt-0.5 text-xs opacity-90">
-              التكلفة الإجمالية {fmt(Math.round(result.totalCost))} د.أ (السعر + تسجيل 5% + وساطة 2%) أعلى من ميزانيتك{" "}
-              {fmt(Math.round(result.budget))} د.أ.
-            </p>
+      </div>
+
+      {kind === "land" ? (
+        <>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <label className="block space-y-1.5">
+              <span className="text-xs font-semibold text-muted-foreground">المساحة (م²)</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                value={landArea}
+                onChange={(event) => setLandArea(event.target.value)}
+                className={inputCls}
+              />
+            </label>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-semibold text-muted-foreground">سعر المتر الحالي (د.أ)</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                value={landPricePerM}
+                onChange={(event) => setLandPricePerM(event.target.value)}
+                className={inputCls}
+              />
+            </label>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-semibold text-muted-foreground">
+                نسبة البناء المسموحة (%) — اختياري، الافتراضي 40%
+              </span>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={100}
+                value={buildRatio}
+                onChange={(event) => setBuildRatio(event.target.value)}
+                className={inputCls}
+              />
+            </label>
           </div>
-          <Link
-            to="/buyer"
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-primary/45 bg-primary/12 px-4 py-3 text-sm font-black text-primary transition hover:bg-primary/20 sm:w-auto"
-          >
-            <Radar className="size-4" /> استخدم بوابة المشتري للبحث ضمن ميزانيتك
-          </Link>
-        </div>
+
+          <GoldButton className="w-full sm:w-auto" onClick={calculateLand}>
+            <Percent className="size-4" /> احسب
+          </GoldButton>
+
+          {landResult && landGrade ? (
+            <div className="fade-up space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Stat
+                  label="القيمة الحالية"
+                  value={`${fmt(Math.round(landResult.currentValue))} د.أ`}
+                  hint={`${fmt(Math.round(landResult.area))} م² × ${fmt(Math.round(landResult.pricePerM))} د.أ/م²`}
+                />
+                <Stat
+                  label="المساحة القابلة للبناء"
+                  value={`${fmt(Math.round(landResult.buildable))} م²`}
+                  hint={`نسبة بناء ${fmtDec(landResult.buildRatio, 0)}% من المساحة`}
+                />
+                <Stat
+                  label="القيمة المتوقعة بعد التطوير"
+                  value={`${fmt(Math.round(landResult.futureValue))} د.أ`}
+                  hint="القيمة الحالية × 1.35"
+                />
+                <Stat
+                  label="هامش الربح المتوقع"
+                  value={`${fmt(Math.round(landResult.profit))} د.أ`}
+                  hint={`نسبة الهامش ${fmtDec(landResult.marginPct, 1)}%`}
+                />
+              </div>
+              <div className={`rounded-xl border px-4 py-3 ${LAND_TONES[landGrade]}`}>
+                <p className="text-sm font-black">{LAND_LABELS[landGrade]}</p>
+                <p className="mt-0.5 text-xs opacity-90">{LAND_NOTES[landGrade]}</p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              حدّد المساحة وسعر المتر ونسبة البناء ثم اضغط «احسب» لعرض القيمة الحالية والقيمة المتوقعة بعد التطوير وهامش الربح.
+            </p>
+          )}
+        </>
       ) : (
-        <p className="text-xs text-muted-foreground">
-          أدخل ميزانيتك والإيجار المتوقع ثم اضغط «احسب» لعرض التكلفة الإجمالية والعائد السنوي وتصنيف الاستثمار.
-        </p>
+        <>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block space-y-1.5">
+              <span className="text-xs font-semibold text-muted-foreground">ميزانيتك (د.أ)</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                value={budget}
+                onChange={(event) => setBudget(event.target.value)}
+                placeholder="مثال: 70000"
+                className={inputCls}
+              />
+            </label>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-semibold text-muted-foreground">الإيجار الشهري المتوقع (د.أ)</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={0}
+                value={rent}
+                onChange={(event) => {
+                  setRent(event.target.value);
+                  setRentEdited(true);
+                }}
+                placeholder="مثال: 350"
+                className={inputCls}
+              />
+              <span className="block text-[11px] text-muted-foreground">
+                الافتراضي من متوسط المنطقة: عائد إيجاري 6% سنوياً على {fmt(Math.round(Math.max(avgPricePerM, 1) * Math.max(areaM2, 1)))} د.أ.
+              </span>
+            </label>
+          </div>
+
+          <GoldButton className="w-full sm:w-auto" onClick={calculate}>
+            <Percent className="size-4" /> احسب
+          </GoldButton>
+
+          {result && grade ? (
+            <div className="fade-up space-y-3">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Stat
+                  label="التكلفة الإجمالية"
+                  value={`${fmt(Math.round(result.totalCost))} د.أ`}
+                  hint={`السعر ${fmt(Math.round(result.price))} + تسجيل 5% ${fmt(Math.round(result.registration))} + وساطة 2% ${fmt(Math.round(result.brokerage))}`}
+                />
+                <Stat
+                  label="العائد السنوي"
+                  value={`${fmtDec(result.yieldPct, 2)}%`}
+                  hint={`إيجار ${fmt(Math.round(result.rent))} د.أ شهرياً`}
+                />
+                <Stat
+                  label="سنوات الاسترداد"
+                  value={`${fmtDec(result.paybackYears, 1)} سنة`}
+                  hint="بدون تضخم أو مصروفات تشغيل"
+                />
+              </div>
+              <div className={`rounded-xl border px-4 py-3 ${CALC_TONES[grade]}`}>
+                <p className="text-sm font-black">{CALC_LABELS[grade]}</p>
+                <p className="mt-0.5 text-xs opacity-90">{CALC_NOTES[grade]}</p>
+              </div>
+              {result.budget > 0 ? (
+                <p
+                  className={`rounded-xl border px-4 py-3 text-sm font-semibold ${
+                    result.budget >= result.totalCost
+                      ? "border-secondary/50 bg-secondary/15 text-secondary-foreground"
+                      : "border-destructive/50 bg-destructive/12 text-destructive-foreground"
+                  }`}
+                >
+                  {result.budget >= result.totalCost
+                    ? `ميزانيتك ${fmt(Math.round(result.budget))} د.أ تغطي التكلفة ويتبقى لديك ${fmt(Math.round(result.budget - result.totalCost))} د.أ.`
+                    : `ميزانيتك ${fmt(Math.round(result.budget))} د.أ لا تغطي التكلفة — ينقصك ${fmt(Math.round(result.totalCost - result.budget))} د.أ.`}
+                </p>
+              ) : null}
+            </div>
+          ) : result?.insufficient ? (
+            <div className="fade-up space-y-3">
+              <div className="rounded-xl border border-destructive/50 bg-destructive/12 px-4 py-3 text-destructive-foreground">
+                <p className="text-sm font-black">
+                  ميزانيتك لا تكفي. ينقصك {fmt(Math.round(result.shortage))} د.أ
+                </p>
+                <p className="mt-0.5 text-xs opacity-90">
+                  التكلفة الإجمالية {fmt(Math.round(result.totalCost))} د.أ (السعر + تسجيل 5% + وساطة 2%) أعلى من ميزانيتك{" "}
+                  {fmt(Math.round(result.budget))} د.أ.
+                </p>
+              </div>
+              <Link
+                to="/buyer"
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-primary/45 bg-primary/12 px-4 py-3 text-sm font-black text-primary transition hover:bg-primary/20 sm:w-auto"
+              >
+                <Radar className="size-4" /> استخدم بوابة المشتري للبحث ضمن ميزانيتك
+              </Link>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              أدخل ميزانيتك والإيجار المتوقع ثم اضغط «احسب» لعرض التكلفة الإجمالية والعائد السنوي وتصنيف الاستثمار.
+            </p>
+          )}
+        </>
       )}
     </GlassCard>
   );
