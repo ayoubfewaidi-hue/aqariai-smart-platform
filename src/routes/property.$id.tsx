@@ -208,6 +208,7 @@ function FeaturedPlotDetail({ plot }: { plot: (typeof FEATURED_PLOTS)[number] })
           areaM2={plot.area}
           areaName={plot.name}
           avgPricePerM={plot.marketAverage}
+          propertyKind={plot.type}
         />
 
         <GlassCard className="space-y-4">
@@ -397,6 +398,7 @@ function LegacyPropertyDetail({
           areaM2={p.area}
           areaName={p.village}
           avgPricePerM={areaAverage(p.village, p.pricePerM)}
+          propertyKind={p.type}
         />
         {regulatory ? (
           <GlassCard className="fade-up space-y-4">
