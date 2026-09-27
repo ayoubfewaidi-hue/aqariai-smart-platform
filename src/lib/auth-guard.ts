@@ -16,13 +16,13 @@ export async function fetchMyRoles(): Promise<AppRole[]> {
 export async function requireAuth(role?: AppRole) {
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) {
-    toast.error("يجب تسجيل الدخول للمتابعة");
+    setTimeout(() => toast.error("يجب تسجيل الدخول للمتابعة"), 400);
     throw redirect({ to: "/" });
   }
   if (role) {
     const roles = await fetchMyRoles();
     if (!roles.includes(role)) {
-      toast.error("لا تملك صلاحية الوصول لهذه الصفحة");
+      setTimeout(() => toast.error("لا تملك صلاحية الوصول لهذه الصفحة"), 400);
       throw redirect({ to: "/" });
     }
   }
