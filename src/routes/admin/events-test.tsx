@@ -10,6 +10,7 @@ import {
   processUnprocessedEvents,
   type EventRow,
 } from "@/lib/events";
+import { requireAuth } from "@/lib/auth-guard";
 
 export const Route = createFileRoute("/admin/events-test")({
   head: () => ({
@@ -19,6 +20,8 @@ export const Route = createFileRoute("/admin/events-test")({
       { name: "robots", content: "noindex" },
     ],
   }),
+  ssr: false,
+  beforeLoad: () => requireAuth("admin"),
   component: EventsTestPage,
 });
 

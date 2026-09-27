@@ -18,6 +18,7 @@ import {
 import { useSession } from "@/hooks/useSession";
 import { askAdvisor } from "@/lib/ai.functions";
 import { fetchFavorites, fetchPublishedProperties, isUuid, toggleFavorite, type DbProperty } from "@/lib/db";
+import { AuthRequiredModal } from "@/components/AuthRequiredModal";
 import { VoicePlayer, getRecognition } from "@/lib/speech";
 
 import {
@@ -92,6 +93,7 @@ function BuyerPortal() {
   const [sellerDraft, setSellerDraft] = useState<SellerDraftProperty | null>(null);
   const [dbProperties, setDbProperties] = useState<DbProperty[]>([]);
   const { user } = useSession();
+  const [authModal, setAuthModal] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [listening, setListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
@@ -259,16 +261,16 @@ function BuyerPortal() {
   };
 
   const toggleFav = (id: string) => {
+    if (!user) {
+      setAuthModal(true);
+      return;
+    }
     const wasFavorite = profile.favorites.includes(id);
     setProfile((pr) => ({
       ...pr,
       favorites: wasFavorite ? pr.favorites.filter((f) => f !== id) : [...pr.favorites, id],
     }));
     if (!isUuid(id)) return;
-    if (!user) {
-      toast.info("سجّل الدخول لحفظ المفضلة في حسابك");
-      return;
-    }
     void toggleFavorite(id, wasFavorite).catch((favError) =>
       toast.error(favError instanceof Error ? favError.message : "تعذر تحديث المفضلة"),
     );
@@ -677,6 +679,7 @@ function BuyerPortal() {
 
       </main>
       <SiteFooter />
+      <AuthRequiredModal open={authModal} onClose={() => setAuthModal(false)} />
     </div>
   );
 }

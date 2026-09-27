@@ -37,6 +37,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/hooks/useSession";
 import { createProperty, uploadImageDataUrls } from "@/lib/db";
+import { requireAuth } from "@/lib/auth-guard";
+import { AuthRequiredModal } from "@/components/AuthRequiredModal";
 import { extractPlanData, generateMarketing, type MarketingPackage, type PlanData } from "@/lib/ai.functions";
 import { DEFAULT_REGULATORY_DATA, SELLER_DRAFT_STORAGE_KEY, fmt, type Property } from "@/lib/data";
 
@@ -58,6 +60,8 @@ export const Route = createFileRoute("/seller")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
+  ssr: false,
+  beforeLoad: () => requireAuth(),
   component: SellerPortal,
 });
 
@@ -188,6 +192,7 @@ function SellerPortal() {
   const [publishing, setPublishing] = useState(false);
   const [publishedId, setPublishedId] = useState<string | null>(null);
   const { user } = useSession();
+  const [authModal, setAuthModal] = useState(false);
   const [viewer, setViewer] = useState<PreviewFile | null>(null);
 
   const planInput = useRef<HTMLInputElement>(null);
@@ -431,8 +436,7 @@ function SellerPortal() {
     const draft = buildDraftProperty();
     if (!user) {
       localStorage.setItem(SELLER_DRAFT_STORAGE_KEY, JSON.stringify(draft));
-      toast.error("سجّل الدخول لحفظ عقارك بشكل دائم");
-      void navigate({ to: "/auth/login" });
+      setAuthModal(true);
       return;
     }
     setPublishing(true);
@@ -1020,6 +1024,7 @@ function SellerPortal() {
         </GlassCard>
       </main>
       <SiteFooter />
+      <AuthRequiredModal open={authModal} onClose={() => setAuthModal(false)} />
       {viewer ? <FileViewer file={viewer} onClose={() => setViewer(null)} /> : null}
     </div>
   );

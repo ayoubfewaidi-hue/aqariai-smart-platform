@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as BuyerRouteImport } from './routes/buyer'
 import { Route as ContactRouteImport } from './routes/contact'
+import { Route as FavoritesRouteImport } from './routes/favorites'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as SellerRouteImport } from './routes/seller'
 import { Route as AdminEventsTestRouteImport } from './routes/admin/events-test'
@@ -40,6 +41,11 @@ const BuyerRoute = BuyerRouteImport.update({
 const ContactRoute = ContactRouteImport.update({
   id: '/contact',
   path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FavoritesRoute = FavoritesRouteImport.update({
+  id: '/favorites',
+  path: '/favorites',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PricingRoute = PricingRouteImport.update({
@@ -88,6 +94,7 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/buyer': typeof BuyerRoute
   '/contact': typeof ContactRoute
+  '/favorites': typeof FavoritesRoute
   '/pricing': typeof PricingRoute
   '/seller': typeof SellerRoute
   '/admin/events-test': typeof AdminEventsTestRoute
@@ -102,6 +109,7 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/buyer': typeof BuyerRoute
   '/contact': typeof ContactRoute
+  '/favorites': typeof FavoritesRoute
   '/pricing': typeof PricingRoute
   '/seller': typeof SellerRoute
   '/admin/events-test': typeof AdminEventsTestRoute
@@ -117,6 +125,7 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/buyer': typeof BuyerRoute
   '/contact': typeof ContactRoute
+  '/favorites': typeof FavoritesRoute
   '/pricing': typeof PricingRoute
   '/seller': typeof SellerRoute
   '/admin/events-test': typeof AdminEventsTestRoute
@@ -133,6 +142,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/buyer'
     | '/contact'
+    | '/favorites'
     | '/pricing'
     | '/seller'
     | '/admin/events-test'
@@ -147,6 +157,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/buyer'
     | '/contact'
+    | '/favorites'
     | '/pricing'
     | '/seller'
     | '/admin/events-test'
@@ -161,6 +172,7 @@ export interface FileRouteTypes {
     | '/about'
     | '/buyer'
     | '/contact'
+    | '/favorites'
     | '/pricing'
     | '/seller'
     | '/admin/events-test'
@@ -176,6 +188,7 @@ export interface RootRouteChildren {
   AboutRoute: typeof AboutRoute
   BuyerRoute: typeof BuyerRoute
   ContactRoute: typeof ContactRoute
+  FavoritesRoute: typeof FavoritesRoute
   PricingRoute: typeof PricingRoute
   SellerRoute: typeof SellerRoute
   AdminEventsTestRoute: typeof AdminEventsTestRoute
@@ -214,6 +227,13 @@ declare module '@tanstack/react-router' {
       path: '/contact'
       fullPath: '/contact'
       preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/favorites': {
+      id: '/favorites'
+      path: '/favorites'
+      fullPath: '/favorites'
+      preLoaderRoute: typeof FavoritesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pricing': {
@@ -280,6 +300,7 @@ const rootRouteChildren: RootRouteChildren = {
   AboutRoute: AboutRoute,
   BuyerRoute: BuyerRoute,
   ContactRoute: ContactRoute,
+  FavoritesRoute: FavoritesRoute,
   PricingRoute: PricingRoute,
   SellerRoute: SellerRoute,
   AdminEventsTestRoute: AdminEventsTestRoute,
