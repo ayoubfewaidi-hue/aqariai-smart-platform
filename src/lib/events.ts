@@ -25,6 +25,7 @@ export async function emitEvent(input: EmitEventInput): Promise<void> {
     if (error) console.warn("[events] insert failed:", error.message);
   } catch (err) {
     console.warn("[events] emit failed:", err);
+  }
 }
 
 export type EventRow = {
