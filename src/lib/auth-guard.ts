@@ -1,7 +1,12 @@
 import { redirect } from "@tanstack/react-router";
-import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
+
+export const GUARD_MESSAGE_KEY = "aqari-guard-message";
+function notify(msg: string) {
+  sessionStorage.setItem(GUARD_MESSAGE_KEY, msg);
+  window.dispatchEvent(new Event(GUARD_MESSAGE_KEY));
+}
 
 export type AppRole = "buyer" | "seller" | "admin";
 
@@ -16,13 +21,13 @@ export async function fetchMyRoles(): Promise<AppRole[]> {
 export async function requireAuth(role?: AppRole) {
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) {
-    setTimeout(() => toast.error("يجب تسجيل الدخول للمتابعة"), 400);
+    notify("يجب تسجيل الدخول للمتابعة");
     throw redirect({ to: "/" });
   }
   if (role) {
     const roles = await fetchMyRoles();
     if (!roles.includes(role)) {
-      setTimeout(() => toast.error("لا تملك صلاحية الوصول لهذه الصفحة"), 400);
+      notify("لا تملك صلاحية الوصول لهذه الصفحة");
       throw redirect({ to: "/" });
     }
   }

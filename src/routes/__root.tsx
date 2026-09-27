@@ -8,7 +8,8 @@ import {
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
-import { Toaster } from "sonner";
+import { Toaster, toast } from "sonner";
+import { GUARD_MESSAGE_KEY } from "@/lib/auth-guard";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -117,6 +118,18 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  useEffect(() => {
+    const show = () => {
+      const msg = sessionStorage.getItem(GUARD_MESSAGE_KEY);
+      if (!msg) return;
+      sessionStorage.removeItem(GUARD_MESSAGE_KEY);
+      setTimeout(() => toast.error(msg), 50);
+    };
+    show();
+    window.addEventListener(GUARD_MESSAGE_KEY, show);
+    return () => window.removeEventListener(GUARD_MESSAGE_KEY, show);
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
