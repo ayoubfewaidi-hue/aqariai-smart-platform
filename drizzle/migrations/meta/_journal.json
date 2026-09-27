@@ -29,6 +29,13 @@
       "when": 1790497595342,
       "tag": "0003_events_update_policy",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790513489106,
+      "tag": "0004_rbac_user_roles",
+      "breakpoints": true
     }
   ]
 }
