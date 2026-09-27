@@ -15,6 +15,13 @@
       "when": 1790079331833,
       "tag": "0001_aqariai_core_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790497310186,
+      "tag": "0002_create_events_table",
+      "breakpoints": true
     }
   ]
 }
