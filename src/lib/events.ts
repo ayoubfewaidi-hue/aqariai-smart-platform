@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 
 export type EmitEventInput = {
   eventType: string;
@@ -19,7 +20,7 @@ export async function emitEvent(input: EmitEventInput): Promise<void> {
       entity_type: input.entityType ?? null,
       entity_id: input.entityId ?? null,
       user_id: input.userId ?? null,
-      payload: input.payload ?? {},
+      payload: (input.payload ?? {}) as Json,
     });
     if (error) console.warn("[events] insert failed:", error.message);
   } catch (err) {
