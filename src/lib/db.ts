@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { DEFAULT_REGULATORY_DATA, normalizeArabic, type Property, type RegulatoryData } from "@/lib/data";
+import { emitEvent } from "@/lib/events";
 
 export type PropertyRow = {
   id: string;
@@ -168,7 +169,15 @@ export async function createProperty(input: NewPropertyInput): Promise<string> {
     .select("id")
     .single();
   if (error) throw error;
-  return (data as { id: string }).id;
+  const propertyId = (data as { id: string }).id;
+  void emitEvent({
+    eventType: "property.created",
+    entityType: "property",
+    entityId: propertyId,
+    payload: { title: input.title, price: input.price, area: input.area },
+    userId,
+  });
+  return propertyId;
 }
 
 async function resolveAreaId(district: string, governorate: string): Promise<string | null> {
