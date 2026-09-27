@@ -15,6 +15,7 @@ import { Route as BuyerRouteImport } from './routes/buyer'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as SellerRouteImport } from './routes/seller'
+import { Route as AdminEventsTestRouteImport } from './routes/admin/events-test'
 import { Route as ApiTtsRouteImport } from './routes/api/tts'
 import { Route as AreaNameRouteImport } from './routes/area.$name'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
@@ -51,6 +52,11 @@ const SellerRoute = SellerRouteImport.update({
   path: '/seller',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminEventsTestRoute = AdminEventsTestRouteImport.update({
+  id: '/admin/events-test',
+  path: '/admin/events-test',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiTtsRoute = ApiTtsRouteImport.update({
   id: '/api/tts',
   path: '/api/tts',
@@ -84,6 +90,7 @@ export interface FileRoutesByFullPath {
   '/contact': typeof ContactRoute
   '/pricing': typeof PricingRoute
   '/seller': typeof SellerRoute
+  '/admin/events-test': typeof AdminEventsTestRoute
   '/api/tts': typeof ApiTtsRoute
   '/area/$name': typeof AreaNameRoute
   '/auth/login': typeof AuthLoginRoute
@@ -97,6 +104,7 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/pricing': typeof PricingRoute
   '/seller': typeof SellerRoute
+  '/admin/events-test': typeof AdminEventsTestRoute
   '/api/tts': typeof ApiTtsRoute
   '/area/$name': typeof AreaNameRoute
   '/auth/login': typeof AuthLoginRoute
@@ -111,6 +119,7 @@ export interface FileRoutesById {
   '/contact': typeof ContactRoute
   '/pricing': typeof PricingRoute
   '/seller': typeof SellerRoute
+  '/admin/events-test': typeof AdminEventsTestRoute
   '/api/tts': typeof ApiTtsRoute
   '/area/$name': typeof AreaNameRoute
   '/auth/login': typeof AuthLoginRoute
@@ -126,6 +135,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/pricing'
     | '/seller'
+    | '/admin/events-test'
     | '/api/tts'
     | '/area/$name'
     | '/auth/login'
@@ -139,6 +149,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/pricing'
     | '/seller'
+    | '/admin/events-test'
     | '/api/tts'
     | '/area/$name'
     | '/auth/login'
@@ -152,6 +163,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/pricing'
     | '/seller'
+    | '/admin/events-test'
     | '/api/tts'
     | '/area/$name'
     | '/auth/login'
@@ -166,6 +178,7 @@ export interface RootRouteChildren {
   ContactRoute: typeof ContactRoute
   PricingRoute: typeof PricingRoute
   SellerRoute: typeof SellerRoute
+  AdminEventsTestRoute: typeof AdminEventsTestRoute
   ApiTtsRoute: typeof ApiTtsRoute
   AreaNameRoute: typeof AreaNameRoute
   AuthLoginRoute: typeof AuthLoginRoute
@@ -217,6 +230,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SellerRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/events-test': {
+      id: '/admin/events-test'
+      path: '/admin/events-test'
+      fullPath: '/admin/events-test'
+      preLoaderRoute: typeof AdminEventsTestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/tts': {
       id: '/api/tts'
       path: '/api/tts'
@@ -262,6 +282,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   PricingRoute: PricingRoute,
   SellerRoute: SellerRoute,
+  AdminEventsTestRoute: AdminEventsTestRoute,
   ApiTtsRoute: ApiTtsRoute,
   AreaNameRoute: AreaNameRoute,
   AuthLoginRoute: AuthLoginRoute,
