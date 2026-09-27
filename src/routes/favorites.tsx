@@ -40,7 +40,7 @@ function FavoritesPage() {
         {items === null ? (
           <p className="text-sm text-muted-foreground">جارٍ التحميل…</p>
         ) : items.length === 0 ? (
-          <EmptyState title="لا توجد عقارات محفوظة" description="احفظ العقارات من بوابة المشتري لتظهر هنا." />
+          <EmptyState title="لا توجد عقارات محفوظة" desc="احفظ العقارات من بوابة المشتري لتظهر هنا." />
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             {items.map((p) => (
