@@ -1024,6 +1024,7 @@ function SellerPortal() {
         </GlassCard>
       </main>
       <SiteFooter />
+      <AuthRequiredModal open={authModal} onClose={() => setAuthModal(false)} />
       {viewer ? <FileViewer file={viewer} onClose={() => setViewer(null)} /> : null}
     </div>
   );
