@@ -20,6 +20,7 @@ import { toast } from "sonner";
 
 import { GlassCard, GoldButton, SiteFooter, SiteHeader, Stat } from "@/components/ui-kit";
 import { useSession } from "@/hooks/useSession";
+import { AuthRequiredModal } from "@/components/AuthRequiredModal";
 import {
   createInquiry,
   fetchFavorites,
@@ -489,6 +490,7 @@ function DraftEmpty() {
 }
 function DbPropertyDetail({ id }: { id: string }) {
   const { user } = useSession();
+  const [authModal, setAuthModal] = useState(false);
   const [property, setProperty] = useState<DbProperty | null>(null);
   const [loading, setLoading] = useState(true);
   const [fav, setFav] = useState(false);
@@ -579,24 +581,36 @@ function DbPropertyDetail({ id }: { id: string }) {
             <Stat label="عدد المشاهدات" value={fmt(property.views)} />
             <Stat label="عدد الاستفسارات" value={fmt(property.inquiries)} />
           </div>
-          <div className="flex flex-wrap gap-2">
-            <GoldButton variant={fav ? "emerald" : "outline"} onClick={() => void onToggleFav()}>
-              {fav ? "✓ في المفضلة" : "أضف إلى المفضلة"}
-            </GoldButton>
-          </div>
-          <div className="space-y-2">
-            <p className="text-sm font-bold">أرسل استفساراً للمالك</p>
-            <textarea
-              value={message}
-              onChange={(event) => setMessage(event.target.value)}
-              rows={3}
-              placeholder="اكتب سؤالك عن العقار…"
-              className="w-full rounded-xl border border-input bg-background/40 px-3 py-2.5 text-sm outline-none transition focus:border-primary/70"
-            />
-            <GoldButton onClick={() => void sendInquiry()} loading={sending}>
-              <MessageCircle className="size-4" /> إرسال الاستفسار
-            </GoldButton>
-          </div>
+          {user ? (
+            <>
+              <div className="flex flex-wrap gap-2">
+                <GoldButton variant={fav ? "emerald" : "outline"} onClick={() => void onToggleFav()}>
+                  {fav ? "✓ في المفضلة" : "أضف إلى المفضلة"}
+                </GoldButton>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-bold">أرسل استفساراً للمالك</p>
+                <textarea
+                  value={message}
+                  onChange={(event) => setMessage(event.target.value)}
+                  rows={3}
+                  placeholder="اكتب سؤالك عن العقار…"
+                  className="w-full rounded-xl border border-input bg-background/40 px-3 py-2.5 text-sm outline-none transition focus:border-primary/70"
+                />
+                <GoldButton onClick={() => void sendInquiry()} loading={sending}>
+                  <MessageCircle className="size-4" /> إرسال الاستفسار
+                </GoldButton>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-wrap items-center gap-3">
+              <p className="text-sm text-muted-foreground">سجّل الدخول لحفظ العقار في المفضلة أو مراسلة المالك.</p>
+              <GoldButton onClick={() => setAuthModal(true)}>
+                <MessageCircle className="size-4" /> تسجيل الدخول للتواصل
+              </GoldButton>
+            </div>
+          )}
+          <AuthRequiredModal open={authModal} onClose={() => setAuthModal(false)} />
         </GlassCard>
       </div>
     </div>

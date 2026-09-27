@@ -679,6 +679,7 @@ function BuyerPortal() {
 
       </main>
       <SiteFooter />
+      <AuthRequiredModal open={authModal} onClose={() => setAuthModal(false)} />
     </div>
   );
 }
