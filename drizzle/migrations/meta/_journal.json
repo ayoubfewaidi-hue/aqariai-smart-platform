@@ -36,6 +36,13 @@
       "when": 1790513489106,
       "tag": "0004_rbac_user_roles",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790513521672,
+      "tag": "0005_auto_admin_on_signup",
+      "breakpoints": true
     }
   ]
 }
