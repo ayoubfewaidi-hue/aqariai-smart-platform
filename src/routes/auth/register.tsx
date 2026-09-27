@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Field, GlassCard, GoldButton, SiteFooter, SiteHeader } from "@/components/ui-kit";
 import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
+import { emitEvent } from "@/lib/events";
 
 export const Route = createFileRoute("/auth/register")({
   head: () => ({
@@ -52,6 +53,15 @@ function RegisterPage() {
     });
     setLoading(false);
     if (error) { toast.error(error.message); return; }
+    if (data.user) {
+      void emitEvent({
+        eventType: "user.registered",
+        entityType: "user",
+        entityId: data.user.id,
+        payload: { full_name: fullName.trim(), role },
+        userId: data.session ? data.user.id : null,
+      });
+    }
     if (!data.session) {
       setSent(true);
       { toast.success("تحقق من بريدك الإلكتروني لتأكيد الحساب"); return; }
