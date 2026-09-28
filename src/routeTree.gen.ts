@@ -17,11 +17,14 @@ import { Route as FavoritesRouteImport } from './routes/favorites'
 import { Route as PricingRouteImport } from './routes/pricing'
 import { Route as SellerRouteImport } from './routes/seller'
 import { Route as AdminEventsTestRouteImport } from './routes/admin/events-test'
+import { Route as AdminSubscriptionsRouteImport } from './routes/admin/subscriptions'
 import { Route as ApiTtsRouteImport } from './routes/api/tts'
 import { Route as AreaNameRouteImport } from './routes/area.$name'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthRegisterRouteImport } from './routes/auth/register'
+import { Route as BrokerSubscriptionRouteImport } from './routes/broker/subscription'
 import { Route as PropertyIdRouteImport } from './routes/property.$id'
+import { Route as VerifyBrokerIdRouteImport } from './routes/verify.$brokerId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -63,6 +66,11 @@ const AdminEventsTestRoute = AdminEventsTestRouteImport.update({
   path: '/admin/events-test',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminSubscriptionsRoute = AdminSubscriptionsRouteImport.update({
+  id: '/admin/subscriptions',
+  path: '/admin/subscriptions',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiTtsRoute = ApiTtsRouteImport.update({
   id: '/api/tts',
   path: '/api/tts',
@@ -83,9 +91,19 @@ const AuthRegisterRoute = AuthRegisterRouteImport.update({
   path: '/auth/register',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BrokerSubscriptionRoute = BrokerSubscriptionRouteImport.update({
+  id: '/broker/subscription',
+  path: '/broker/subscription',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PropertyIdRoute = PropertyIdRouteImport.update({
   id: '/property/$id',
   path: '/property/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerifyBrokerIdRoute = VerifyBrokerIdRouteImport.update({
+  id: '/verify/$brokerId',
+  path: '/verify/$brokerId',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -98,11 +116,14 @@ export interface FileRoutesByFullPath {
   '/pricing': typeof PricingRoute
   '/seller': typeof SellerRoute
   '/admin/events-test': typeof AdminEventsTestRoute
+  '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/api/tts': typeof ApiTtsRoute
   '/area/$name': typeof AreaNameRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
+  '/broker/subscription': typeof BrokerSubscriptionRoute
   '/property/$id': typeof PropertyIdRoute
+  '/verify/$brokerId': typeof VerifyBrokerIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -113,11 +134,14 @@ export interface FileRoutesByTo {
   '/pricing': typeof PricingRoute
   '/seller': typeof SellerRoute
   '/admin/events-test': typeof AdminEventsTestRoute
+  '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/api/tts': typeof ApiTtsRoute
   '/area/$name': typeof AreaNameRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
+  '/broker/subscription': typeof BrokerSubscriptionRoute
   '/property/$id': typeof PropertyIdRoute
+  '/verify/$brokerId': typeof VerifyBrokerIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -129,11 +153,14 @@ export interface FileRoutesById {
   '/pricing': typeof PricingRoute
   '/seller': typeof SellerRoute
   '/admin/events-test': typeof AdminEventsTestRoute
+  '/admin/subscriptions': typeof AdminSubscriptionsRoute
   '/api/tts': typeof ApiTtsRoute
   '/area/$name': typeof AreaNameRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
+  '/broker/subscription': typeof BrokerSubscriptionRoute
   '/property/$id': typeof PropertyIdRoute
+  '/verify/$brokerId': typeof VerifyBrokerIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -146,11 +173,14 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/seller'
     | '/admin/events-test'
+    | '/admin/subscriptions'
     | '/api/tts'
     | '/area/$name'
     | '/auth/login'
     | '/auth/register'
+    | '/broker/subscription'
     | '/property/$id'
+    | '/verify/$brokerId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -161,11 +191,14 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/seller'
     | '/admin/events-test'
+    | '/admin/subscriptions'
     | '/api/tts'
     | '/area/$name'
     | '/auth/login'
     | '/auth/register'
+    | '/broker/subscription'
     | '/property/$id'
+    | '/verify/$brokerId'
   id:
     | '__root__'
     | '/'
@@ -176,11 +209,14 @@ export interface FileRouteTypes {
     | '/pricing'
     | '/seller'
     | '/admin/events-test'
+    | '/admin/subscriptions'
     | '/api/tts'
     | '/area/$name'
     | '/auth/login'
     | '/auth/register'
+    | '/broker/subscription'
     | '/property/$id'
+    | '/verify/$brokerId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -192,11 +228,14 @@ export interface RootRouteChildren {
   PricingRoute: typeof PricingRoute
   SellerRoute: typeof SellerRoute
   AdminEventsTestRoute: typeof AdminEventsTestRoute
+  AdminSubscriptionsRoute: typeof AdminSubscriptionsRoute
   ApiTtsRoute: typeof ApiTtsRoute
   AreaNameRoute: typeof AreaNameRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthRegisterRoute: typeof AuthRegisterRoute
+  BrokerSubscriptionRoute: typeof BrokerSubscriptionRoute
   PropertyIdRoute: typeof PropertyIdRoute
+  VerifyBrokerIdRoute: typeof VerifyBrokerIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -257,6 +296,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminEventsTestRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/subscriptions': {
+      id: '/admin/subscriptions'
+      path: '/admin/subscriptions'
+      fullPath: '/admin/subscriptions'
+      preLoaderRoute: typeof AdminSubscriptionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/tts': {
       id: '/api/tts'
       path: '/api/tts'
@@ -285,11 +331,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRegisterRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/broker/subscription': {
+      id: '/broker/subscription'
+      path: '/broker/subscription'
+      fullPath: '/broker/subscription'
+      preLoaderRoute: typeof BrokerSubscriptionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/property/$id': {
       id: '/property/$id'
       path: '/property/$id'
       fullPath: '/property/$id'
       preLoaderRoute: typeof PropertyIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verify/$brokerId': {
+      id: '/verify/$brokerId'
+      path: '/verify/$brokerId'
+      fullPath: '/verify/$brokerId'
+      preLoaderRoute: typeof VerifyBrokerIdRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -304,11 +364,14 @@ const rootRouteChildren: RootRouteChildren = {
   PricingRoute: PricingRoute,
   SellerRoute: SellerRoute,
   AdminEventsTestRoute: AdminEventsTestRoute,
+  AdminSubscriptionsRoute: AdminSubscriptionsRoute,
   ApiTtsRoute: ApiTtsRoute,
   AreaNameRoute: AreaNameRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthRegisterRoute: AuthRegisterRoute,
+  BrokerSubscriptionRoute: BrokerSubscriptionRoute,
   PropertyIdRoute: PropertyIdRoute,
+  VerifyBrokerIdRoute: VerifyBrokerIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
