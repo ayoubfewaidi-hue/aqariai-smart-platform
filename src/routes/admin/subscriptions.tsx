@@ -26,7 +26,7 @@ function AdminSubscriptions() {
   const [busy, setBusy] = useState(false);
 
   const submit = async () => {
-    if (!/^[0-9a-f-]{36}$/i.test(userId.trim())) return toast.error("معرّف المستخدم غير صالح");
+    if (!/^[0-9a-f-]{36}$/i.test(userId.trim())) { toast.error("معرّف المستخدم غير صالح"); return; }
     setBusy(true);
     try {
       await adminGrantSubscription(userId.trim(), plan, period);

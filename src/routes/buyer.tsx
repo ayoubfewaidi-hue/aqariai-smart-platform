@@ -791,7 +791,7 @@ function PropertyCard({
           <h3 className="flex flex-wrap items-center gap-2 text-base font-bold">
             {p.title}
             {(p as { verified?: boolean }).verified && (p as { ownerId?: string }).ownerId && (
-              <VerifiedBadge brokerId={(p as { ownerId: string }).ownerId} />
+              <VerifiedBadge brokerId={(p as unknown as { ownerId: string }).ownerId} />
             )}
           </h3>
           <p className="text-xs text-muted-foreground">

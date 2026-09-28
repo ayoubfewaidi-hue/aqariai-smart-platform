@@ -64,7 +64,7 @@ export async function cancelMySubscription() {
   const { data: auth } = await supabase.auth.getUser();
   const { error } = await supabase.rpc("cancel_my_subscription");
   if (error) throw error;
-  await emitEvent({ eventType: "subscription.cancelled", entityType: "user", entityId: auth.user?.id, userId: auth.user?.id });
+  await emitEvent({ eventType: "subscription.cancelled", entityType: "user", entityId: (auth.user?.id ?? null), userId: (auth.user?.id ?? null) });
 }
 
 const RANK: Record<Plan, number> = { free: 0, pro: 1, business: 2 };
@@ -76,14 +76,14 @@ export async function adminGrantSubscription(userId: string, plan: Plan, period:
   if (error) throw error;
   const res = data as { id: string; previous_plan: Plan | null; plan: Plan; expires_at: string | null };
   const payload = { plan, period, previous_plan: res.previous_plan, expires_at: res.expires_at, subscriber_id: userId };
-  await emitEvent({ eventType: "subscription.granted_by_admin", entityType: "subscription", entityId: res.id, payload, userId: auth.user?.id });
+  await emitEvent({ eventType: "subscription.granted_by_admin", entityType: "subscription", entityId: res.id, payload, userId: (auth.user?.id ?? null) });
   const upgraded = res.previous_plan && RANK[plan] > RANK[res.previous_plan];
   await emitEvent({
     eventType: upgraded ? "subscription.upgraded" : "subscription.created",
     entityType: "subscription",
     entityId: res.id,
     payload,
-    userId: auth.user?.id,
+    userId: (auth.user?.id ?? null),
   });
   return res;
 }

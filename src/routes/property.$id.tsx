@@ -380,7 +380,7 @@ function LegacyPropertyDetail({
               <h1 className="flex flex-wrap items-center gap-2 text-2xl font-black sm:text-3xl">
                 {p.title}
                 {(p as { verified?: boolean }).verified && (p as { ownerId?: string }).ownerId && (
-                  <VerifiedBadge brokerId={(p as { ownerId: string }).ownerId} />
+                  <VerifiedBadge brokerId={(p as unknown as { ownerId: string }).ownerId} />
                 )}
               </h1>
               <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
