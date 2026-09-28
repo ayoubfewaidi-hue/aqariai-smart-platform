@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { DEFAULT_REGULATORY_DATA, normalizeArabic, type Property, type RegulatoryData } from "@/lib/data";
 import { emitEvent } from "@/lib/events";
+import { fetchBrokerRanks } from "@/lib/subscriptions";
 
 export type PropertyRow = {
   id: string;
@@ -40,6 +41,8 @@ export type DbProperty = Property & {
   dealType: string;
   negotiableRange: { min: number; max: number } | null;
   images: string[];
+  verified?: boolean;
+  rankWeight?: number;
 };
 
 const FALLBACK_IMAGE =
@@ -92,13 +95,21 @@ export async function fetchPublishedProperties(): Promise<DbProperty[]> {
     .order("created_at", { ascending: false })
     .limit(200);
   if (error) throw error;
-  return (data as unknown as PropertyRow[]).map(mapRowToProperty);
+  const list = (data as unknown as PropertyRow[]).map(mapRowToProperty);
+  const ranks = await fetchBrokerRanks(list.map((p) => p.ownerId));
+  // Business > Pro > Free; stable sort keeps newest-first inside each tier.
+  return list
+    .map((p) => ({ ...p, verified: ranks.get(p.ownerId)?.verified ?? false, rankWeight: ranks.get(p.ownerId)?.weight ?? 0 }))
+    .sort((a, b) => b.rankWeight - a.rankWeight);
 }
 
 export async function fetchPropertyById(id: string): Promise<DbProperty | null> {
   const { data, error } = await supabase.from("properties").select("*").eq("id", id).maybeSingle();
   if (error) throw error;
-  return data ? mapRowToProperty(data as unknown as PropertyRow) : null;
+  if (!data) return null;
+  const p = mapRowToProperty(data as unknown as PropertyRow);
+  const r = (await fetchBrokerRanks([p.ownerId])).get(p.ownerId);
+  return { ...p, verified: r?.verified ?? false, rankWeight: r?.weight ?? 0 };
 }
 
 export async function fetchMyProperties(): Promise<DbProperty[]> {

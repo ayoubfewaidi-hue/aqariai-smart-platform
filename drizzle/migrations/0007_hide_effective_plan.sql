@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.effective_plan(uuid) FROM anon, authenticated, public;

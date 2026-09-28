@@ -10,3 +10,4 @@
 <!-- LOVABLE:END -->
 - Roles live in `public.user_roles` (app_role: buyer|seller|admin) checked via `has_role()`; `profiles.role` is deprecated — prevents users self-escalating via profile updates.
 - Protected pages use `ssr: false` + `beforeLoad: requireAuth(role?)` from `src/lib/auth-guard.ts`, redirecting to `/` — session lives in browser storage.
+- Subscriptions are written only via security-definer RPCs (admin_grant_subscription etc.); badge/ranking read via broker_ranks/is_verified_broker which check expires_at — prevents self-granted or stale badges and never exposes plans.

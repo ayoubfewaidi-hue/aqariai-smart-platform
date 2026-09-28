@@ -30,6 +30,7 @@ import {
   toggleFavorite,
   type DbProperty,
 } from "@/lib/db";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import {
   DEFAULT_REGULATORY_DATA,
   FEATURED_PLOTS,
@@ -376,7 +377,12 @@ function LegacyPropertyDetail({
         <GlassCard strong className="fade-up space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-black sm:text-3xl">{p.title}</h1>
+              <h1 className="flex flex-wrap items-center gap-2 text-2xl font-black sm:text-3xl">
+                {p.title}
+                {(p as { verified?: boolean }).verified && (p as { ownerId?: string }).ownerId && (
+                  <VerifiedBadge brokerId={(p as unknown as { ownerId: string }).ownerId} />
+                )}
+              </h1>
               <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
                 <MapPin className="size-4 text-primary" /> {p.village} — {p.city} · {p.basin} · قطعة {p.plot}
               </p>

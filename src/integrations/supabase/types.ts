@@ -319,6 +319,166 @@ export type Database = {
           },
         ]
       }
+      service_orders: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          price: number
+          service_id: string
+          source: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          price?: number
+          service_id: string
+          source?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          price?: number
+          service_id?: string
+          source?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_orders_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_orders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_orders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      services: {
+        Row: {
+          category: string
+          created_at: string
+          description: string | null
+          duration_days: number
+          id: string
+          is_active: boolean
+          name_ar: string
+          name_en: string
+          price: number
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          duration_days?: number
+          id?: string
+          is_active?: boolean
+          name_ar: string
+          name_en: string
+          price?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string | null
+          duration_days?: number
+          id?: string
+          is_active?: boolean
+          name_ar?: string
+          name_en?: string
+          price?: number
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          billing_period: string
+          cancelled_at: string | null
+          created_at: string
+          expires_at: string | null
+          granted_by: string | null
+          id: string
+          metadata: Json
+          plan: string
+          previous_plan: string | null
+          scheduled_plan: string | null
+          source: string
+          started_at: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          billing_period?: string
+          cancelled_at?: string | null
+          created_at?: string
+          expires_at?: string | null
+          granted_by?: string | null
+          id?: string
+          metadata?: Json
+          plan?: string
+          previous_plan?: string | null
+          scheduled_plan?: string | null
+          source?: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          billing_period?: string
+          cancelled_at?: string | null
+          created_at?: string
+          expires_at?: string | null
+          granted_by?: string | null
+          id?: string
+          metadata?: Json
+          plan?: string
+          previous_plan?: string | null
+          scheduled_plan?: string | null
+          source?: string
+          started_at?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -377,6 +537,20 @@ export type Database = {
       }
     }
     Functions: {
+      admin_grant_subscription: {
+        Args: { _period?: string; _plan: string; _user_id: string }
+        Returns: Json
+      }
+      broker_ranks: {
+        Args: { _user_ids: string[] }
+        Returns: {
+          rank_weight: number
+          user_id: string
+          verified: boolean
+        }[]
+      }
+      cancel_my_subscription: { Args: never; Returns: undefined }
+      effective_plan: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -388,6 +562,8 @@ export type Database = {
         Args: { _property_id: string }
         Returns: undefined
       }
+      is_verified_broker: { Args: { _user_id: string }; Returns: boolean }
+      schedule_downgrade: { Args: { _plan: string }; Returns: undefined }
     }
     Enums: {
       app_role: "buyer" | "seller" | "admin"
