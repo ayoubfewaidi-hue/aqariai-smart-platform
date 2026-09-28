@@ -18,6 +18,7 @@ import {
 import { useSession } from "@/hooks/useSession";
 import { askAdvisor } from "@/lib/ai.functions";
 import { fetchFavorites, fetchPublishedProperties, isUuid, toggleFavorite, type DbProperty } from "@/lib/db";
+import { VerifiedBadge } from "@/components/VerifiedBadge";
 import { AuthRequiredModal } from "@/components/AuthRequiredModal";
 import { VoicePlayer, getRecognition } from "@/lib/speech";
 
@@ -787,7 +788,12 @@ function PropertyCard({
       </div>
       <div className="space-y-3 p-5">
         <div>
-          <h3 className="text-base font-bold">{p.title}</h3>
+          <h3 className="flex flex-wrap items-center gap-2 text-base font-bold">
+            {p.title}
+            {(p as { verified?: boolean }).verified && (p as { ownerId?: string }).ownerId && (
+              <VerifiedBadge brokerId={(p as { ownerId: string }).ownerId} />
+            )}
+          </h3>
           <p className="text-xs text-muted-foreground">
             {p.village} — {p.city} · {p.area} م² · {p.zoning}
           </p>
