@@ -50,6 +50,13 @@
       "when": 1790599522321,
       "tag": "0006_subscriptions_services",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790599534282,
+      "tag": "0007_hide_effective_plan",
+      "breakpoints": true
     }
   ]
 }
